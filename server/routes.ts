@@ -260,7 +260,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 // Create Gemini model and generate content
                 const geminiModel = geminiClient.getGenerativeModel({ model: "gemini-1.5-flash" });
                 
-                const prompt = "This is a receipt image. Extract all the text you can see in the image, especially the merchant name, date, and total amount. Format your response in plain text.";
+                const prompt = "This is a receipt image. Extract all the text you can see in the image. Focus especially on:\n1. The merchant/store name at the top\n2. The exact date in the format it appears (MM/DD/YYYY, DD.MM.YYYY, etc.)\n3. The TOTAL amount - be sure to correctly identify the final total (not subtotal) and include ALL digits before and after decimal point\n\nPlease format your response in plain text and be precise about numbers. If you see a total amount like '54.50', make sure to include the full number.";
                 
                 const result = await geminiModel.generateContent({
                   contents: [
@@ -328,7 +328,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // Create Gemini model and generate content
           const geminiModel = geminiClient.getGenerativeModel({ model: "gemini-1.5-flash" });
           
-          const prompt = "This is a receipt image. Extract all the text you can see in the image, especially the merchant name, date, and total amount. Format your response in plain text.";
+          const prompt = "This is a receipt image. Extract all the text you can see in the image. Focus especially on:\n1. The merchant/store name at the top\n2. The exact date in the format it appears (MM/DD/YYYY, DD.MM.YYYY, etc.)\n3. The TOTAL amount - be sure to correctly identify the final total (not subtotal) and include ALL digits before and after decimal point\n\nPlease format your response in plain text and be precise about numbers. If you see a total amount like '54.50', make sure to include the full number.";
           
           const result = await geminiModel.generateContent({
             contents: [
@@ -385,6 +385,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       let merchantName = ocrError ? "Receipt Upload - Needs Manual Entry" : "Unknown";
       let total = 0;
       let notes = ocrError ? "OCR processing failed. Please enter receipt details manually." : "";
+      let receiptDate: Date = new Date(); // Default to today's date
       
       // Extract information from OCR text
       if (ocrText) {
@@ -402,30 +403,248 @@ export async function registerRoutes(app: Express): Promise<Server> {
           merchantName = merchantMatch[1].trim();
         }
         
-        // Try different approaches to extract total amount
-        // Method 1: Standard regex for "total: $X.XX" pattern
-        const totalRegex1 = /total[:\s]*\$?(\d+\.\d{2})/i;
+        // Structure to store potential totals with their confidence scores
+        const potentialTotals: { amount: number; confidence: number }[] = [];
+  
+        // Method 1: Look for TOTAL or TOTAL AMOUNT specifically in all caps (highest confidence)
+        const totalRegex1 = /TOTAL(?:\s+AMOUNT)?[\s:]*\$?\s*(\d+(?:\.\d+)?)/i;
         const totalMatch1 = ocrText.match(totalRegex1);
         if (totalMatch1 && totalMatch1[1]) {
-          total = parseFloat(totalMatch1[1]);
+          const amount = parseFloat(totalMatch1[1]);
+          if (!isNaN(amount)) {
+            potentialTotals.push({ amount, confidence: 100 });
+            console.log("Found total using Method 1 (ALL CAPS):", amount);
+          }
         }
         
-        // Method 2: Look for dollar amounts with "total" nearby
-        const totalRegex2 = /(?:total|amount|sum|due)(?:.{1,20})\$?(\d+\.\d{2})/i;
+        // Method 2: Look for "Total: $XX.XX" pattern
+        const totalRegex2 = /total[:\s]*\$?(\d+\.?\d*)/i;
         const totalMatch2 = ocrText.match(totalRegex2);
-        if (!total && totalMatch2 && totalMatch2[1]) {
-          total = parseFloat(totalMatch2[1]);
+        if (totalMatch2 && totalMatch2[1]) {
+          const amount = parseFloat(totalMatch2[1]);
+          if (!isNaN(amount)) {
+            potentialTotals.push({ amount, confidence: 90 });
+            console.log("Found total using Method 2:", amount);
+          }
         }
         
-        // Method 3: Look for specific Gemini AI response patterns
-        const totalMatch3 = ocrText.match(/total(?:\s+amount)?[\s:]+\$?(\d+\.\d{2})/i);
-        if (!total && totalMatch3 && totalMatch3[1]) {
-          total = parseFloat(totalMatch3[1]);
+        // Method 3: Look for currency symbol followed by the largest number
+        const currencyMatches = Array.from(ocrText.matchAll(/(?:€|\$|£)\s?(\d+\.?\d*)/gi));
+        if (currencyMatches && currencyMatches.length > 0) {
+          let largestAmount = 0;
+          currencyMatches.forEach(match => {
+            if (match && match[1]) {
+              const amount = parseFloat(match[1]);
+              if (!isNaN(amount) && amount > largestAmount) {
+                largestAmount = amount;
+              }
+            }
+          });
+          
+          if (largestAmount > 0) {
+            potentialTotals.push({ amount: largestAmount, confidence: 80 });
+            console.log("Found total using Method 3 (currency symbols):", largestAmount);
+          }
         }
+        
+        // Method 4: Look for common total indicators with numbers nearby
+        const totalRegex4 = /(?:total|amount|sum|due|zu zahlen|summe|betrag|gesamt)(?:.{1,25})(\d+\.?\d*)/i;
+        const totalMatch4 = ocrText.match(totalRegex4);
+        if (totalMatch4 && totalMatch4[1]) {
+          const amount = parseFloat(totalMatch4[1]);
+          if (!isNaN(amount)) {
+            potentialTotals.push({ amount, confidence: 75 });
+            console.log("Found total using Method 4:", amount);
+          }
+        }
+        
+        // Method 5: Look for subtotal/tax/total pattern (common in receipts)
+        const subtotalMatch = ocrText.match(/subtotal[\s:]*\$?(\d+\.?\d*)/i);
+        const taxMatch = ocrText.match(/tax[\s:]*\$?(\d+\.?\d*)/i);
+        
+        if (subtotalMatch && subtotalMatch[1] && taxMatch && taxMatch[1]) {
+          const subtotal = parseFloat(subtotalMatch[1]);
+          const tax = parseFloat(taxMatch[1]);
+          
+          if (!isNaN(subtotal) && !isNaN(tax)) {
+            const calculatedTotal = subtotal + tax;
+            
+            // Look for numbers close to our calculated total
+            const allNumbers = ocrText.match(/\d+\.\d+/g);
+            if (allNumbers) {
+              const parsedNumbers = allNumbers.map(num => parseFloat(num));
+              
+              for (const num of parsedNumbers) {
+                // If we find a number within 1% of our calculated total, it's likely the actual total
+                if (Math.abs(num - calculatedTotal) / calculatedTotal < 0.01) {
+                  potentialTotals.push({ amount: num, confidence: 85 });
+                  console.log("Found total using Method 5 (subtotal + tax verification):", num);
+                  break;
+                }
+              }
+            }
+          }
+        }
+        
+        // Method 6: Look for two-digit numbers with decimal point followed by exactly two digits
+        // This is good for catching totals like 54.50
+        const preciseNumbersRegex = /\b(\d{2,})\.(\d{2})\b/g;
+        const preciseNumbersMatches = [];
+        let preciseMatch;
+        while ((preciseMatch = preciseNumbersRegex.exec(ocrText)) !== null) {
+          preciseNumbersMatches.push(preciseMatch[0]);
+        }
+        
+        if (preciseNumbersMatches.length > 0) {
+          const parsedNumbers = preciseNumbersMatches.map(num => parseFloat(num));
+          const largestNumber = Math.max(...parsedNumbers.filter(num => !isNaN(num)));
+          if (largestNumber > 0) {
+            // If this is significantly larger than other detected totals, give it higher confidence
+            let confidence = 60;
+            for (const potential of potentialTotals) {
+              if (largestNumber > potential.amount * 2) {
+                confidence = 70; // Higher confidence if it's much larger
+                break;
+              }
+            }
+            potentialTotals.push({ amount: largestNumber, confidence });
+            console.log("Found precise total using Method 6:", largestNumber);
+          }
+        }
+        
+        // Method 7: Look for the largest number with decimal point in the receipt
+        // This is a fallback method when all else fails
+        const allNumbersRegex = /\d+\.\d+/g;
+        const allNumbersMatches = [];
+        let allNumbersMatch;
+        while ((allNumbersMatch = allNumbersRegex.exec(ocrText)) !== null) {
+          allNumbersMatches.push(allNumbersMatch[0]);
+        }
+        
+        if (allNumbersMatches.length > 0 && potentialTotals.length === 0) {
+          const parsedNumbers = allNumbersMatches.map(num => parseFloat(num));
+          const largestNumber = Math.max(...parsedNumbers.filter(num => !isNaN(num)));
+          if (largestNumber > 0) {
+            potentialTotals.push({ amount: largestNumber, confidence: 50 });
+            console.log("Found total using fallback Method 7:", largestNumber);
+          }
+        }
+        
+        // If we found potential totals, select the one with highest confidence
+        if (potentialTotals.length > 0) {
+          // Sort by confidence (descending)
+          potentialTotals.sort((a, b) => b.confidence - a.confidence);
+          console.log("All potential totals:", potentialTotals);
+          total = potentialTotals[0].amount;
+        }
+        
+        // Log the detected total for debugging
+        console.log("Final detected total amount:", total);
+        console.log("OCR text excerpt:", ocrText.substring(0, 300));
+        
+        // Extract date from receipt text
+        let receiptDateStr = "";
+        
+        // Look for dates in the format DD/MM/YYYY or MM/DD/YYYY
+        const slashDateRegex = /\b(\d{1,2})\/(\d{1,2})\/(\d{2,4})\b/g;
+        let slashMatch = slashDateRegex.exec(ocrText);
+        const slashMatches: RegExpExecArray[] = [];
+        while (slashMatch !== null) {
+          slashMatches.push(slashMatch);
+          slashMatch = slashDateRegex.exec(ocrText);
+        }
+        
+        // Look for dates in the format DD.MM.YYYY
+        const dotDateRegex = /\b(\d{1,2})\.(\d{1,2})\.(\d{2,4})\b/g;
+        let dotMatch = dotDateRegex.exec(ocrText);
+        const dotMatches: RegExpExecArray[] = [];
+        while (dotMatch !== null) {
+          dotMatches.push(dotMatch);
+          dotMatch = dotDateRegex.exec(ocrText);
+        }
+        
+        // Look for dates in the format YYYY-MM-DD
+        const dashDateRegex = /\b(\d{4})-(\d{1,2})-(\d{1,2})\b/g;
+        let dashMatch = dashDateRegex.exec(ocrText);
+        const dashMatches: RegExpExecArray[] = [];
+        while (dashMatch !== null) {
+          dashMatches.push(dashMatch);
+          dashMatch = dashDateRegex.exec(ocrText);
+        }
+        
+        // Look for dates with month names, e.g. "15 Mar 2023"
+        const monthNameRegex = /\b(\d{1,2})\s+(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+(\d{2,4})\b/gi;
+        let monthNameMatch = monthNameRegex.exec(ocrText);
+        const monthNameMatches: RegExpExecArray[] = [];
+        while (monthNameMatch !== null) {
+          monthNameMatches.push(monthNameMatch);
+          monthNameMatch = monthNameRegex.exec(ocrText);
+        }
+        
+        // Check for explicit date labels
+        const dateLabel = /\b(date|datum|dated|day|issued)[\s:]+([0-9\.\/\-]+)/i;
+        const dateLabelMatch = ocrText.match(dateLabel);
+        
+        // Try to extract a date string from one of the matches
+        if (dateLabelMatch && dateLabelMatch[2]) {
+          receiptDateStr = dateLabelMatch[2];
+        } else if (slashMatches.length > 0) {
+          // Use the first match for slash format
+          const match = slashMatches[0];
+          const day = match[1].padStart(2, '0');
+          const month = match[2].padStart(2, '0');
+          const year = match[3].length === 2 ? `20${match[3]}` : match[3];
+          // Assume European format (DD/MM/YYYY)
+          receiptDateStr = `${year}-${month}-${day}`;
+        } else if (dotMatches.length > 0) {
+          // Use the first match for dot format (European)
+          const match = dotMatches[0];
+          const day = match[1].padStart(2, '0');
+          const month = match[2].padStart(2, '0');
+          const year = match[3].length === 2 ? `20${match[3]}` : match[3];
+          receiptDateStr = `${year}-${month}-${day}`;
+        } else if (dashMatches.length > 0) {
+          // Already in ISO format
+          const match = dashMatches[0];
+          receiptDateStr = `${match[1]}-${match[2].padStart(2, '0')}-${match[3].padStart(2, '0')}`;
+        } else if (monthNameMatches.length > 0) {
+          // Handle month name format
+          const match = monthNameMatches[0];
+          const day = parseInt(match[1]);
+          const monthName = match[2].toLowerCase();
+          const year = parseInt(match[3]);
+          
+          const monthMap: Record<string, number> = {
+            'jan': 0, 'feb': 1, 'mar': 2, 'apr': 3, 'may': 4, 'jun': 5,
+            'jul': 6, 'aug': 7, 'sep': 8, 'oct': 9, 'nov': 10, 'dec': 11
+          };
+          
+          const month = monthMap[monthName.substring(0, 3)];
+          const fullYear = year < 100 ? 2000 + year : year;
+          
+          // Create a date directly
+          receiptDate = new Date(fullYear, month, day);
+        }
+        
+        // Try to parse the date string if we have one
+        if (receiptDateStr) {
+          try {
+            const parsedDate = new Date(receiptDateStr);
+            if (!isNaN(parsedDate.getTime())) {
+              receiptDate = parsedDate;
+            }
+          } catch (e) {
+            // Keep using today's date
+            console.error("Failed to parse receipt date:", e);
+          }
+        }
+            
+
         
         // Add extracted text to notes for reference
         if (!ocrError) {
           notes = "OCR text extracted. You can edit this receipt if any details are incorrect.";
+          notes += " Extracted text: " + ocrText.slice(0, 200) + (ocrText.length > 200 ? "..." : "");
         }
       }
       
@@ -433,7 +652,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const receiptData = {
         merchantName,
         total: total.toString(), // Convert to string as required by the schema
-        date: new Date(), // Use Date object as required by the schema
+        date: receiptDate, // Use extracted date or today's date as fallback
         imageUrl: req.file.path,
         notes,
         ocrText
