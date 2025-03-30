@@ -266,7 +266,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 // Create Gemini model and generate content
                 const geminiModel = geminiClient.getGenerativeModel({ model: "gemini-1.5-flash" });
                 
-                const prompt = "You are a receipt scanner. Extract the following information from the receipt image:\n\nMerchant/Store Name: (Extract the store name - usually at the top)\nDate: (Extract the date in its original format)\nTOTAL Amount: (Extract the final total amount with currency symbol)\n\nFormat your response using EXACTLY this structure. Be as precise as possible with the numbers and decimal places. If any information is missing or unclear, write 'Not found' for that field. DO NOT include any markdown formatting, explanations, or any text beyond what is asked.";
+                const prompt = "You are an expert receipt data extractor. Given an image of a receipt, your task is to accurately extract the following information:\n\n* **Name of the establishment:** (e.g., Restaurant Name, Store Name, etc.)\n* **Date of purchase/transaction:** (in a clear, standardized format like YYYY-MM-DD or DD Month YYYY)\n* **Total amount:** (including currency symbol if present)\n\nAnalyze the provided receipt image and return the extracted information in a structured format like this:\n\n**Extracted Information:**\n\nName: [Establishment Name]\nDate: [YYYY-MM-DD] \nTotal: [Amount] [Currency]";
                 
                 const result = await geminiModel.generateContent({
                   contents: [
@@ -334,7 +334,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // Create Gemini model and generate content
           const geminiModel = geminiClient.getGenerativeModel({ model: "gemini-1.5-flash" });
           
-          const prompt = "You are a receipt scanner. Extract the following information from the receipt image:\n\nMerchant/Store Name: (Extract the store name - usually at the top)\nDate: (Extract the date in its original format)\nTOTAL Amount: (Extract the final total amount with currency symbol)\n\nFormat your response using EXACTLY this structure. Be as precise as possible with the numbers and decimal places. If any information is missing or unclear, write 'Not found' for that field. DO NOT include any markdown formatting, explanations, or any text beyond what is asked.";
+          const prompt = "You are an expert receipt data extractor. Given an image of a receipt, your task is to accurately extract the following information:\n\n* **Name of the establishment:** (e.g., Restaurant Name, Store Name, etc.)\n* **Date of purchase/transaction:** (in a clear, standardized format like YYYY-MM-DD or DD Month YYYY)\n* **Total amount:** (including currency symbol if present)\n\nAnalyze the provided receipt image and return the extracted information in a structured format like this:\n\n**Extracted Information:**\n\nName: [Establishment Name]\nDate: [YYYY-MM-DD] \nTotal: [Amount] [Currency]";
           
           const result = await geminiModel.generateContent({
             contents: [
@@ -384,7 +384,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
               /store(?:[^:]*):[\s]*([^*\n]+)/i,                 // Store: Value 
               /merchant\/store name:[\s]*([^*\n]+)/i,           // Merchant/Store Name: Value
               /\*\*merchant[^:]*\*\*:?\s+([^*\n]+)/i,           // **Merchant...**: Value
-              /\d+\.\s+\*\*merchant[^:]*:\*\*\s+([^*\n]+)/i     // 1. **Merchant...:** Value
+              /\d+\.\s+\*\*merchant[^:]*:\*\*\s+([^*\n]+)/i,    // 1. **Merchant...:** Value
+              /name:?\s+\[?([^\]]+)(?:\]|\n|$)/i,               // Name: [Value] - Gemini Flash 2.0 format
+              /name:?\s+(.+?)(?:\n|$)/i                         // Name: Value - Simpler Gemini format
             ];
             
             // Try each pattern until we find a good match
@@ -413,7 +415,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
               /amount(?:[^:]*):[\s]*([^*\n]+)/i,               // Amount: Value
               /total amount(?:[^:]*):[\s]*([^*\n]+)/i,         // Total Amount: Value
               /\*\*total[^:]*\*\*:?\s+([^*\n]+)/i,             // **Total...**: Value
-              /\d+\.\s+\*\*total[^:]*:\*\*\s+([^*\n]+)/i      // 3. **Total...:** Value
+              /\d+\.\s+\*\*total[^:]*:\*\*\s+([^*\n]+)/i,      // 3. **Total...:** Value
+              /total:?\s+\[?([^\]]+)(?:\]|\n|$)/i,             // Total: [Value] - Gemini Flash 2.0 format
+              /total:?\s+(.+?)(?:\n|$)/i                       // Total: Value - Simpler Gemini format
             ];
             
             // Try each pattern until we find a good match
@@ -437,7 +441,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
             const datePatterns = [
               /date(?:[^:]*):[\s]*([^*\n]+)/i,                 // Date: Value
               /\*\*date[^:]*\*\*:?\s+([^*\n]+)/i,              // **Date...**: Value
-              /\d+\.\s+\*\*date[^:]*:\*\*\s+([^*\n]+)/i        // 2. **Date...:** Value
+              /\d+\.\s+\*\*date[^:]*:\*\*\s+([^*\n]+)/i,       // 2. **Date...:** Value
+              /date:?\s+\[?([^\]]+)(?:\]|\n|$)/i,              // Date: [Value] - Gemini Flash 2.0 format
+              /date:?\s+(.+?)(?:\n|$)/i                        // Date: Value - Simpler Gemini format
             ];
             
             // Try each pattern until we find a good match
