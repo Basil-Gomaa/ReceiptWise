@@ -17,7 +17,7 @@ import {
 
 export default function SettingsPage() {
   const { toast } = useToast();
-  const [apiKey, setApiKey] = useState(process.env.GOOGLE_VISION_API_KEY || "");
+  const [apiKey, setApiKey] = useState("");
   const [activeTab, setActiveTab] = useState("account");
   
   const handleSaveApiKey = () => {
