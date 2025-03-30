@@ -218,6 +218,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     let receiptDate: Date = new Date(); // Default to today's date
     let ocrText = "";
     let ocrError = "";
+    let suggestedCategory = "";
     
     try {
       if (!req.file) {
@@ -266,7 +267,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 // Create Gemini model and generate content
                 const geminiModel = geminiClient.getGenerativeModel({ model: "gemini-1.5-flash" });
                 
-                const prompt = "You are an expert receipt data extractor. Given an image of a receipt, your task is to accurately extract the following information:\n\n* **Name of the establishment:** (e.g., Restaurant Name, Store Name, etc.)\n* **Date of purchase/transaction:** (in a clear, standardized format like YYYY-MM-DD or DD Month YYYY)\n* **Total amount:** (including currency symbol if present)\n\nAnalyze the provided receipt image and return the extracted information in a structured format like this:\n\n**Extracted Information:**\n\nName: [Establishment Name]\nDate: [YYYY-MM-DD] \nTotal: [Amount] [Currency]";
+                const prompt = "You are an expert receipt data extractor. Given an image of a receipt, your task is to accurately extract the following information:\n\n* **Name of the establishment:** (e.g., Restaurant Name, Store Name, etc.)\n* **Date of purchase/transaction:** (in a clear, standardized format like YYYY-MM-DD or DD Month YYYY)\n* **Total amount:** (including currency symbol if present)\n* **Products purchased:** (list the main products or services purchased, if visible)\n* **Establishment type/category:** (based on the products or services, categorize this receipt as one of: Food & Dining, Shopping, Entertainment, Travel, Services, Groceries, Health, or Other)\n\nAnalyze the provided receipt image and return the extracted information in a structured format like this:\n\n**Extracted Information:**\n\nName: [Establishment Name]\nDate: [YYYY-MM-DD] \nTotal: [Amount] [Currency]\nProducts: [List of main products/items, separated by commas]\nCategory: [Category name from the list above]";
                 
                 const result = await geminiModel.generateContent({
                   contents: [
@@ -334,7 +335,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // Create Gemini model and generate content
           const geminiModel = geminiClient.getGenerativeModel({ model: "gemini-1.5-flash" });
           
-          const prompt = "You are an expert receipt data extractor. Given an image of a receipt, your task is to accurately extract the following information:\n\n* **Name of the establishment:** (e.g., Restaurant Name, Store Name, etc.)\n* **Date of purchase/transaction:** (in a clear, standardized format like YYYY-MM-DD or DD Month YYYY)\n* **Total amount:** (including currency symbol if present)\n\nAnalyze the provided receipt image and return the extracted information in a structured format like this:\n\n**Extracted Information:**\n\nName: [Establishment Name]\nDate: [YYYY-MM-DD] \nTotal: [Amount] [Currency]";
+          const prompt = "You are an expert receipt data extractor. Given an image of a receipt, your task is to accurately extract the following information:\n\n* **Name of the establishment:** (e.g., Restaurant Name, Store Name, etc.)\n* **Date of purchase/transaction:** (in a clear, standardized format like YYYY-MM-DD or DD Month YYYY)\n* **Total amount:** (including currency symbol if present)\n* **Products purchased:** (list the main products or services purchased, if visible)\n* **Establishment type/category:** (based on the products or services, categorize this receipt as one of: Food & Dining, Shopping, Entertainment, Travel, Services, Groceries, Health, or Other)\n\nAnalyze the provided receipt image and return the extracted information in a structured format like this:\n\n**Extracted Information:**\n\nName: [Establishment Name]\nDate: [YYYY-MM-DD] \nTotal: [Amount] [Currency]\nProducts: [List of main products/items, separated by commas]\nCategory: [Category name from the list above]";
           
           const result = await geminiModel.generateContent({
             contents: [
@@ -522,6 +523,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (ocrText) {
         // Try different extraction methods for merchant name
         const lines = ocrText.split('\n');
+        
+        // Extract product information if available
+        let products = "";
+        
+        // Look for Products: section in Gemini's response
+        const productsMatch = ocrText.match(/products:?\s*\[?([^\]]+)(?:\]|\n|$)/i);
+        if (productsMatch && productsMatch[1]) {
+          products = productsMatch[1].trim()
+            .replace(/\[|\]/g, '')  // Remove square brackets if present
+            .replace(/^["']|["']$/g, ''); // Remove quotes
+          
+          if (products) {
+            console.log("Extracted products from OCR:", products);
+            notes = `Products detected: ${products}. ${notes || ""}`.trim();
+          }
+        }
+        
+        // Look for Category: section in Gemini's response
+        const categoryMatch = ocrText.match(/category:?\s*\[?([^\]]+)(?:\]|\n|$)/i);
+        if (categoryMatch && categoryMatch[1]) {
+          suggestedCategory = categoryMatch[1].trim()
+            .replace(/\[|\]/g, '')  // Remove square brackets if present
+            .replace(/^["']|["']$/g, ''); // Remove quotes
+          
+          if (suggestedCategory) {
+            console.log("Extracted category suggestion from OCR:", suggestedCategory);
+            
+            // Try to find a matching category from our existing categories
+            // Will be done after creation when we have the receipt ID
+          }
+        }
         
         // Method 1: First line is often the merchant name
         if (lines.length > 0) {
@@ -877,7 +909,49 @@ export async function registerRoutes(app: Express): Promise<Server> {
         ocrText
       };
       
+      // Create the receipt first
       const newReceipt = await storage.createReceipt(receiptData);
+      
+      // If we have a suggested category, try to find a matching category and update the receipt
+      if (suggestedCategory) {
+        try {
+          // Get all categories
+          const categories = await storage.getAllCategories();
+          
+          // Normalize category names for matching
+          const normalizedSuggested = suggestedCategory.toLowerCase().trim();
+          
+          // Try to find a matching category
+          const matchingCategory = categories.find(category => {
+            // Direct match
+            if (category.name.toLowerCase() === normalizedSuggested) {
+              return true;
+            }
+            
+            // Partial match (e.g., "Food" matches "Food & Dining")
+            if (category.name.toLowerCase().includes(normalizedSuggested) || 
+                normalizedSuggested.includes(category.name.toLowerCase())) {
+              return true;
+            }
+            
+            return false;
+          });
+          
+          if (matchingCategory) {
+            console.log(`Found matching category: ${matchingCategory.name} (ID: ${matchingCategory.id})`);
+            
+            // Update the receipt with the category ID
+            await storage.updateReceipt(newReceipt.id, { 
+              categoryId: matchingCategory.id 
+            });
+            
+            // Update our local copy of the receipt
+            newReceipt.categoryId = matchingCategory.id;
+          }
+        } catch (error) {
+          console.error("Error setting category:", error);
+        }
+      }
       
       // Clean up file
       try {

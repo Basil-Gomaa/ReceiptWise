@@ -68,7 +68,16 @@ export default function ReceiptCard({ receipt, category, onDelete, onEdit }: Rec
         
         {receipt.notes && (
           <div className="mt-2 text-sm">
-            <p className="text-gray-600 dark:text-gray-300 italic">{receipt.notes}</p>
+            {receipt.notes.includes("Products detected:") ? (
+              <div>
+                <p className="text-gray-600 dark:text-gray-300 font-medium">Items:</p>
+                <p className="text-gray-600 dark:text-gray-300">
+                  {receipt.notes.replace("Products detected:", "").replace(/\.$/, "").trim()}
+                </p>
+              </div>
+            ) : (
+              <p className="text-gray-600 dark:text-gray-300 italic">{receipt.notes}</p>
+            )}
           </div>
         )}
       </div>
