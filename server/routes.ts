@@ -528,22 +528,64 @@ export async function registerRoutes(app: Express): Promise<Server> {
           merchantName = lines[0].trim();
         }
         
-        // Method 2: Look for text patterns common in Gemini AI responses
+        // Method 2a: Look for text patterns common in Gemini AI responses
         const merchantMatch = ocrText.match(/merchant(?:\s+name)?[\s:]+([^\n]+)/i);
         if (merchantMatch && merchantMatch[1]) {
           merchantName = merchantMatch[1].trim();
+        }
+        
+        // Method 2b: Look for the new Gemini Flash 2.0 structured format with "Name:" pattern
+        const nameMatch = ocrText.match(/name:\s*([^\n]+)/i);
+        if (nameMatch && nameMatch[1]) {
+          const extractedName = nameMatch[1].trim()
+            .replace(/\[|\]/g, '')  // Remove square brackets if present
+            .replace(/^["']|["']$/g, ''); // Remove quotes
           
-          // Clean up the merchant name further if it came from Gemini AI (they often have format prefixes)
-          merchantName = merchantName.replace(/^EAST MECHANICS, INC\.$/i, "East Repair Inc.");
-          merchantName = merchantName.replace(/^Here's the extracted information.*$/i, "");
-          merchantName = merchantName.replace(/^\*\*.*\*\*$/i, "");
-          
-          // If the merchantName starts with a number or special character, it's likely not formatted correctly
-          if (/^[\d\W]/.test(merchantName) || merchantName.length > 40) {
-            // Try to extract just the merchant name from the first line if available
-            if (lines.length > 0 && !lines[0].includes("extracted") && lines[0].length < 40) {
-              merchantName = lines[0].trim();
+          if (extractedName && extractedName.length < 100) {
+            merchantName = extractedName;
+            console.log("Extracted merchant name from Gemini Flash 2.0 format:", merchantName);
+          }
+        }
+        
+        // Clean up the merchant name further if it came from Gemini AI
+        merchantName = merchantName.replace(/^EAST MECHANICS, INC\.$/i, "East Repair Inc.");
+        merchantName = merchantName.replace(/^Here's the extracted information.*$/i, "");
+        merchantName = merchantName.replace(/^\*\*extracted information:\*\*$/i, "");
+        merchantName = merchantName.replace(/^\*\*.*\*\*$/i, "");
+        
+        // If the merchantName starts with "**Extracted Information:**" or similar, try to find the actual name
+        if (merchantName.includes("Extracted Information") || merchantName.length > 40 || /^[\d\W]/.test(merchantName)) {
+          // Scan the full text for a "Name:" pattern after the header
+          const nameAfterHeader = ocrText.match(/\*\*Extracted Information:\*\*\s*\n+Name:\s*([^\n]+)/i);
+          if (nameAfterHeader && nameAfterHeader[1]) {
+            const actualName = nameAfterHeader[1].trim()
+              .replace(/\[|\]/g, '')  // Remove square brackets if present
+              .replace(/^["']|["']$/g, ''); // Remove quotes
+            
+            if (actualName && actualName.length < 40) {
+              merchantName = actualName;
+              console.log("Found name after header:", merchantName);
             }
+          } else if (lines.length > 1) {
+            // Try to extract the name from the line after "Extracted Information" or from subsequent lines
+            for (let i = 0; i < lines.length; i++) {
+              if (lines[i].includes("Extracted Information") && i+1 < lines.length && lines[i+1].startsWith("Name:")) {
+                const nameLine = lines[i+1].trim();
+                const nameValue = nameLine.replace(/^Name:\s*/i, '').trim();
+                
+                if (nameValue && nameValue.length < 40) {
+                  merchantName = nameValue;
+                  console.log("Found name in next line after header:", merchantName);
+                  break;
+                }
+              }
+            }
+          }
+          
+          // If we still have issues, try the first line if it's reasonable
+          if ((merchantName.includes("Extracted Information") || merchantName.length > 40) && 
+              lines.length > 0 && !lines[0].includes("extracted") && lines[0].length < 40) {
+            merchantName = lines[0].trim();
           }
         }
         
