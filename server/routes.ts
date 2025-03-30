@@ -236,8 +236,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Extract receipt information
-      let merchantName = "Unknown";
+      let merchantName = ocrError ? "Receipt Upload - Needs Manual Entry" : "Unknown";
       let total = 0;
+      let notes = ocrError ? "OCR processing failed. Please enter receipt details manually." : "";
       
       // Extract merchant name (assuming it's typically at the top of the receipt)
       if (ocrText) {
@@ -260,6 +261,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         total: total.toString(), // Convert to string as required by the schema
         date: new Date(), // Use Date object as required by the schema
         imageUrl: req.file.path,
+        notes,
         ocrText
       };
       

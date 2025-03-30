@@ -278,6 +278,13 @@ export default function Receipts() {
                   receipt={receipt}
                   category={category}
                   onDelete={() => handleDeleteReceipt(receipt.id)}
+                  onEdit={() => {
+                    // Future feature: implement edit functionality
+                    toast({
+                      title: "Edit receipt",
+                      description: "The edit receipt feature will be available soon. For now, you can delete and re-upload with correct details.",
+                    });
+                  }}
                 />
               );
             })}
