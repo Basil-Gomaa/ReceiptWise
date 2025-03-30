@@ -266,7 +266,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 // Create Gemini model and generate content
                 const geminiModel = geminiClient.getGenerativeModel({ model: "gemini-1.5-flash" });
                 
-                const prompt = "This is a receipt image. Extract all the text you can see in the image. Focus especially on:\n1. The merchant/store name at the top\n2. The exact date in the format it appears (MM/DD/YYYY, DD.MM.YYYY, etc.)\n3. The TOTAL amount - be sure to correctly identify the final total (not subtotal) and include ALL digits before and after decimal point\n\nPlease format your response in plain text and be precise about numbers. If you see a total amount like '54.50', make sure to include the full number.";
+                const prompt = "You are a receipt scanner. Extract the following information from the receipt image:\n\nMerchant/Store Name: (Extract the store name - usually at the top)\nDate: (Extract the date in its original format)\nTOTAL Amount: (Extract the final total amount with currency symbol)\n\nFormat your response using EXACTLY this structure. Be as precise as possible with the numbers and decimal places. If any information is missing or unclear, write 'Not found' for that field. DO NOT include any markdown formatting, explanations, or any text beyond what is asked.";
                 
                 const result = await geminiModel.generateContent({
                   contents: [
@@ -334,7 +334,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // Create Gemini model and generate content
           const geminiModel = geminiClient.getGenerativeModel({ model: "gemini-1.5-flash" });
           
-          const prompt = "This is a receipt image. Extract all the text you can see in the image. Focus especially on:\n1. The merchant/store name at the top\n2. The exact date in the format it appears (MM/DD/YYYY, DD.MM.YYYY, etc.)\n3. The TOTAL amount - be sure to correctly identify the final total (not subtotal) and include ALL digits before and after decimal point\n\nPlease format your response in plain text and be precise about numbers. If you see a total amount like '54.50', make sure to include the full number.";
+          const prompt = "You are a receipt scanner. Extract the following information from the receipt image:\n\nMerchant/Store Name: (Extract the store name - usually at the top)\nDate: (Extract the date in its original format)\nTOTAL Amount: (Extract the final total amount with currency symbol)\n\nFormat your response using EXACTLY this structure. Be as precise as possible with the numbers and decimal places. If any information is missing or unclear, write 'Not found' for that field. DO NOT include any markdown formatting, explanations, or any text beyond what is asked.";
           
           const result = await geminiModel.generateContent({
             contents: [
@@ -605,6 +605,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
           if (!isNaN(amount)) {
             potentialTotals.push({ amount, confidence: 95 }); // High confidence for Gemini's specific formatting
             console.log("Found total using Gemini AI specific format:", amount);
+          }
+        }
+        
+        // Method 4c: Specifically target newer Gemini AI models' "TOTAL Amount:" pattern
+        const geminiTotalRegex2 = /TOTAL\s+Amount:\s*\$?\s*(\d+\.?\d*)/i;
+        const geminiTotalMatch2 = ocrText.match(geminiTotalRegex2);
+        if (geminiTotalMatch2 && geminiTotalMatch2[1]) {
+          const amount = parseFloat(geminiTotalMatch2[1]);
+          if (!isNaN(amount)) {
+            potentialTotals.push({ amount, confidence: 98 }); // Very high confidence for Gemini's newest formatting
+            console.log("Found total using Gemini Flash 2.0 specific format:", amount);
           }
         }
         
