@@ -381,16 +381,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
             // Look for key-value pairs in the Gemini response
             const merchantNameMatch = responseText.match(/(?:merchant|store)(?:[^:]*):([^*\n]+)/i);
             if (merchantNameMatch && merchantNameMatch[1]) {
-              merchantName = merchantNameMatch[1].trim();
-              console.log("Extracted merchant name from Gemini format:", merchantName);
+              // Extract and clean merchant name from structured response
+              const extractedMerchantName = merchantNameMatch[1].trim();
+              
+              // Don't store the full Gemini response as merchant name
+              if (!extractedMerchantName.includes("extracted information from") && 
+                  !extractedMerchantName.includes("**")) {
+                merchantName = extractedMerchantName;
+                console.log("Extracted merchant name from Gemini format:", merchantName);
+              }
             }
             
             const totalMatch = responseText.match(/(?:total|amount)(?:[^:]*):([^*\n]+)/i);
             if (totalMatch && totalMatch[1]) {
               const totalStr = totalMatch[1].trim().replace(/[^\d.,]/g, '');
-              total = parseFloat(totalStr);
-              if (!isNaN(total)) {
-                console.log("Extracted total amount from Gemini format:", total);
+              const extractedTotal = parseFloat(totalStr);
+              if (!isNaN(extractedTotal) && extractedTotal > 0) {
+                total = extractedTotal;
+                console.log("Extracted total amount from structured Gemini format:", total);
+                // This direct extraction is prioritized over the confidence-based system
               }
             }
             
