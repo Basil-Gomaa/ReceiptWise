@@ -31,7 +31,15 @@ interface Category {
 
 interface UploadResponse {
   ocrError?: string;
+  ocrText?: string;
   receipt?: Receipt;
+  id?: number;
+  merchantName?: string;
+  total?: number;
+  date?: string;
+  categoryId?: number;
+  notes?: string;
+  imageUrl?: string;
 }
 
 export default function Receipts() {
@@ -60,7 +68,12 @@ export default function Receipts() {
         
         // Handle case where the API returned success but with OCR errors
         if (data.ocrError) {
-          setOcrError(data.ocrError);
+          // Check if this is a message about falling back to Gemini AI
+          if (data.ocrError.includes("Trying alternative OCR")) {
+            setOcrError("Google Vision API unavailable. Trying Gemini AI...");
+          } else {
+            setOcrError(data.ocrError);
+          }
           // We still return the data since the receipt was saved
           return data;
         }
@@ -77,12 +90,20 @@ export default function Receipts() {
       queryClient.invalidateQueries({ queryKey: ["/api/analytics/monthly"] });
       queryClient.invalidateQueries({ queryKey: ["/api/analytics/categories"] });
       
-      // If there was an OCR error, show a warning toast
+      // If there was an OCR error or we had to use fallback method, show appropriate toast
       if (data.ocrError) {
-        toast({
-          title: "Receipt uploaded with limitations",
-          description: "Your receipt was saved, but automatic data extraction failed. You can edit details manually.",
-        });
+        // If Gemini AI was used as fallback (ocrError exists but we also have ocrText)
+        if (data.ocrError.includes("Trying alternative OCR") && data.ocrText) {
+          toast({
+            title: "Receipt processed with Gemini AI",
+            description: "Google Vision API was unavailable, but Gemini AI successfully extracted the text. Please verify the details.",
+          });
+        } else {
+          toast({
+            title: "Receipt uploaded with limitations",
+            description: "Your receipt was saved, but automatic data extraction failed. You can edit details manually.",
+          });
+        }
       } else {
         toast({
           title: "Receipt uploaded successfully",

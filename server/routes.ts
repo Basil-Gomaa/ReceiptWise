@@ -9,6 +9,7 @@ import { z } from "zod";
 import { ZodError } from "zod";
 import { fromZodError } from "zod-validation-error";
 import { ImageAnnotatorClient } from "@google-cloud/vision";
+import { GoogleGenerativeAI, HarmCategory, HarmBlockThreshold } from "@google/generative-ai";
 
 // Add multer middleware types
 interface MulterRequest extends Request {
@@ -66,20 +67,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Initialize Google Vision client
   let visionClient: ImageAnnotatorClient | null = null;
+  let geminiClient: GoogleGenerativeAI | null = null;
   
   try {
-    const apiKey = process.env.GOOGLE_VISION_API_KEY || process.env.VISION_API_KEY;
+    const visionApiKey = process.env.GOOGLE_VISION_API_KEY || process.env.VISION_API_KEY;
+    const geminiApiKey = process.env.GEMINI_API_KEY;
     
-    if (apiKey) {
+    if (visionApiKey) {
       visionClient = new ImageAnnotatorClient({
-        apiKey: apiKey
+        apiKey: visionApiKey
       });
       console.log("Google Vision API client initialized successfully.");
     } else {
       console.warn("Google Vision API key not found. OCR functionality will be limited.");
     }
+    
+    if (geminiApiKey) {
+      geminiClient = new GoogleGenerativeAI(geminiApiKey);
+      console.log("Google Gemini AI client initialized successfully.");
+    } else {
+      console.warn("Google Gemini API key not found. Alternative OCR will not be available.");
+    }
   } catch (error) {
-    console.error("Failed to initialize Google Vision client:", error);
+    console.error("Failed to initialize Google API clients:", error);
   }
 
   // CATEGORIES ENDPOINTS
@@ -210,7 +220,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       let ocrText = "";
       let ocrError: string | undefined;
       
-      // Perform OCR if Vision client is available
+      // Helper function to convert file to base64
+      const fileToBase64 = async (filePath: string): Promise<string> => {
+        try {
+          const fileData = await fs.readFile(filePath);
+          return fileData.toString('base64');
+        } catch (error) {
+          console.error("Error reading file:", error);
+          throw error;
+        }
+      };
+      
+      // First try with Google Vision API
       if (visionClient) {
         try {
           const [result] = await visionClient.textDetection(filePath);
@@ -219,20 +240,145 @@ export async function registerRoutes(app: Express): Promise<Server> {
             ocrText = detections[0].description || "";
           }
         } catch (error: any) {
-          console.error("OCR processing error:", error);
+          console.error("Vision API OCR processing error:", error);
           
           // Check if this is a permission/API not enabled error
           const errorMessage = error.toString();
           if (errorMessage.includes("PERMISSION_DENIED") || 
               errorMessage.includes("API has not been used") || 
               errorMessage.includes("it is disabled")) {
-            ocrError = "Google Vision API not properly enabled. Please enable the API in your Google Cloud Console.";
+            ocrError = "Google Vision API not properly enabled. Trying alternative OCR...";
+            
+            // Fallback to Gemini if available
+            if (geminiClient) {
+              try {
+                console.log("Attempting OCR with Gemini AI...");
+                
+                // Convert image to base64
+                const base64Image = await fileToBase64(filePath);
+                
+                // Create Gemini model and generate content
+                const geminiModel = geminiClient.getGenerativeModel({ model: "gemini-1.5-flash" });
+                
+                const prompt = "This is a receipt image. Extract all the text you can see in the image, especially the merchant name, date, and total amount. Format your response in plain text.";
+                
+                const result = await geminiModel.generateContent({
+                  contents: [
+                    {
+                      role: "user",
+                      parts: [
+                        { text: prompt },
+                        { inlineData: { mimeType: req.file?.mimetype || "image/jpeg", data: base64Image } }
+                      ]
+                    }
+                  ],
+                  generationConfig: {
+                    temperature: 0,
+                    topP: 1,
+                    topK: 32,
+                    maxOutputTokens: 4096,
+                  },
+                  safetySettings: [
+                    {
+                      category: HarmCategory.HARM_CATEGORY_HARASSMENT,
+                      threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,
+                    },
+                    {
+                      category: HarmCategory.HARM_CATEGORY_HATE_SPEECH,
+                      threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,
+                    },
+                    {
+                      category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT,
+                      threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,
+                    },
+                    {
+                      category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT,
+                      threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,
+                    },
+                  ],
+                });
+                
+                const responseText = result.response.text();
+                if (responseText) {
+                  ocrText = responseText;
+                  ocrError = undefined; // Clear error since we successfully got text from Gemini
+                  console.log("Gemini AI OCR successful!");
+                } else {
+                  ocrError = "Both Google Vision and Gemini AI failed to extract text from the receipt.";
+                }
+              } catch (geminiError: any) {
+                console.error("Gemini AI OCR error:", geminiError);
+                ocrError = "Both OCR methods failed. Error: " + (geminiError.message || "Unknown Gemini error");
+              }
+            } else {
+              ocrError = "Google Vision API not available and no fallback OCR configured.";
+            }
           } else {
             ocrError = "Error processing OCR. Technical details: " + (error.message || 'Unknown error');
           }
         }
+      } else if (geminiClient) {
+        // If Vision API isn't available but Gemini is, use Gemini directly
+        try {
+          console.log("Vision API unavailable, attempting OCR with Gemini AI...");
+          
+          // Convert image to base64
+          const base64Image = await fileToBase64(filePath);
+          
+          // Create Gemini model and generate content
+          const geminiModel = geminiClient.getGenerativeModel({ model: "gemini-1.5-flash" });
+          
+          const prompt = "This is a receipt image. Extract all the text you can see in the image, especially the merchant name, date, and total amount. Format your response in plain text.";
+          
+          const result = await geminiModel.generateContent({
+            contents: [
+              {
+                role: "user",
+                parts: [
+                  { text: prompt },
+                  { inlineData: { mimeType: req.file?.mimetype || "image/jpeg", data: base64Image } }
+                ]
+              }
+            ],
+            generationConfig: {
+              temperature: 0,
+              topP: 1,
+              topK: 32,
+              maxOutputTokens: 4096,
+            },
+            safetySettings: [
+              {
+                category: HarmCategory.HARM_CATEGORY_HARASSMENT,
+                threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,
+              },
+              {
+                category: HarmCategory.HARM_CATEGORY_HATE_SPEECH,
+                threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,
+              },
+              {
+                category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT,
+                threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,
+              },
+              {
+                category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT,
+                threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,
+              },
+            ],
+          });
+          
+          const responseText = result.response.text();
+          if (responseText) {
+            ocrText = responseText;
+            console.log("Gemini AI OCR successful!");
+          } else {
+            ocrError = "Gemini AI failed to extract text from the receipt.";
+          }
+        } catch (geminiError: any) {
+          console.error("Gemini AI OCR error:", geminiError);
+          ocrError = "Gemini OCR failed. Error: " + (geminiError.message || "Unknown Gemini error");
+        }
       } else {
-        ocrError = "Google Vision API client not available. Check your API key configuration.";
+        ocrError = "No OCR services available. Please configure either Google Vision API or Gemini API.";
       }
       
       // Extract receipt information
@@ -240,18 +386,46 @@ export async function registerRoutes(app: Express): Promise<Server> {
       let total = 0;
       let notes = ocrError ? "OCR processing failed. Please enter receipt details manually." : "";
       
-      // Extract merchant name (assuming it's typically at the top of the receipt)
+      // Extract information from OCR text
       if (ocrText) {
+        // Try different extraction methods for merchant name
         const lines = ocrText.split('\n');
+        
+        // Method 1: First line is often the merchant name
         if (lines.length > 0) {
           merchantName = lines[0].trim();
         }
         
-        // Try to extract total amount
-        const totalRegex = /total[:\s]*\$?(\d+\.\d{2})/i;
-        const totalMatch = ocrText.match(totalRegex);
-        if (totalMatch && totalMatch[1]) {
-          total = parseFloat(totalMatch[1]);
+        // Method 2: Look for text patterns common in Gemini AI responses
+        const merchantMatch = ocrText.match(/merchant(?:\s+name)?[\s:]+([^\n]+)/i);
+        if (merchantMatch && merchantMatch[1]) {
+          merchantName = merchantMatch[1].trim();
+        }
+        
+        // Try different approaches to extract total amount
+        // Method 1: Standard regex for "total: $X.XX" pattern
+        const totalRegex1 = /total[:\s]*\$?(\d+\.\d{2})/i;
+        const totalMatch1 = ocrText.match(totalRegex1);
+        if (totalMatch1 && totalMatch1[1]) {
+          total = parseFloat(totalMatch1[1]);
+        }
+        
+        // Method 2: Look for dollar amounts with "total" nearby
+        const totalRegex2 = /(?:total|amount|sum|due)(?:.{1,20})\$?(\d+\.\d{2})/i;
+        const totalMatch2 = ocrText.match(totalRegex2);
+        if (!total && totalMatch2 && totalMatch2[1]) {
+          total = parseFloat(totalMatch2[1]);
+        }
+        
+        // Method 3: Look for specific Gemini AI response patterns
+        const totalMatch3 = ocrText.match(/total(?:\s+amount)?[\s:]+\$?(\d+\.\d{2})/i);
+        if (!total && totalMatch3 && totalMatch3[1]) {
+          total = parseFloat(totalMatch3[1]);
+        }
+        
+        // Add extracted text to notes for reference
+        if (!ocrError) {
+          notes = "OCR text extracted. You can edit this receipt if any details are incorrect.";
         }
       }
       
