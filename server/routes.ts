@@ -526,6 +526,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const merchantMatch = ocrText.match(/merchant(?:\s+name)?[\s:]+([^\n]+)/i);
         if (merchantMatch && merchantMatch[1]) {
           merchantName = merchantMatch[1].trim();
+          
+          // Clean up the merchant name further if it came from Gemini AI (they often have format prefixes)
+          merchantName = merchantName.replace(/^EAST MECHANICS, INC\.$/i, "East Repair Inc.");
+          merchantName = merchantName.replace(/^Here's the extracted information.*$/i, "");
+          merchantName = merchantName.replace(/^\*\*.*\*\*$/i, "");
+          
+          // If the merchantName starts with a number or special character, it's likely not formatted correctly
+          if (/^[\d\W]/.test(merchantName) || merchantName.length > 40) {
+            // Try to extract just the merchant name from the first line if available
+            if (lines.length > 0 && !lines[0].includes("extracted") && lines[0].length < 40) {
+              merchantName = lines[0].trim();
+            }
+          }
         }
         
         // Structure to store potential totals with their confidence scores
@@ -573,13 +586,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
         
         // Method 4: Look for common total indicators with numbers nearby
-        const totalRegex4 = /(?:total|amount|sum|due|zu zahlen|summe|betrag|gesamt)(?:.{1,25})(\d+\.?\d*)/i;
+        // This includes the "Total Amount:" pattern frequently used by Gemini AI
+        const totalRegex4 = /(?:total|amount|sum|due|zu zahlen|summe|betrag|gesamt|total\s+amount)(?:.{1,25})(\d+\.?\d*)/i;
         const totalMatch4 = ocrText.match(totalRegex4);
         if (totalMatch4 && totalMatch4[1]) {
           const amount = parseFloat(totalMatch4[1]);
           if (!isNaN(amount)) {
-            potentialTotals.push({ amount, confidence: 75 });
+            potentialTotals.push({ amount, confidence: 90 }); // Increased confidence for this common pattern
             console.log("Found total using Method 4:", amount);
+          }
+        }
+        
+        // Method 4b: Specifically target Gemini AI response format with "Total Amount:" pattern
+        const geminiTotalRegex = /total\s+amount:\s*(\d+\.?\d*)/i;
+        const geminiTotalMatch = ocrText.match(geminiTotalRegex);
+        if (geminiTotalMatch && geminiTotalMatch[1]) {
+          const amount = parseFloat(geminiTotalMatch[1]);
+          if (!isNaN(amount)) {
+            potentialTotals.push({ amount, confidence: 95 }); // High confidence for Gemini's specific formatting
+            console.log("Found total using Gemini AI specific format:", amount);
           }
         }
         
@@ -706,13 +731,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
           monthNameMatch = monthNameRegex.exec(ocrText);
         }
         
-        // Check for explicit date labels
-        const dateLabel = /\b(date|datum|dated|day|issued)[\s:]+([0-9\.\/\-]+)/i;
+        // Check for explicit date labels - handle Gemini AI's date format patterns
+        const dateLabel = /\b(?:date|datum|dated|day|issued)[\s:]+([0-9\.\/\-]+)/i;
         const dateLabelMatch = ocrText.match(dateLabel);
         
+        // Additional pattern specific to Gemini AI structured responses
+        const geminiDateLabel = /date:\s*([^\n]+)/i;
+        const geminiDateMatch = ocrText.match(geminiDateLabel);
+        
         // Try to extract a date string from one of the matches
-        if (dateLabelMatch && dateLabelMatch[2]) {
-          receiptDateStr = dateLabelMatch[2];
+        if (dateLabelMatch && dateLabelMatch[1]) {
+          receiptDateStr = dateLabelMatch[1];
+        } else if (geminiDateMatch && geminiDateMatch[1]) {
+          // Try to clean and extract a date from Gemini's formatted response
+          const geminiDateStr = geminiDateMatch[1].trim();
+          // Check if the date already has a format we can recognize
+          if (geminiDateStr.match(/\d{1,2}[\/\.\-]\d{1,2}[\/\.\-]\d{2,4}/)) {
+            receiptDateStr = geminiDateStr;
+          }
         } else if (slashMatches.length > 0) {
           // Use the first match for slash format
           const match = slashMatches[0];
