@@ -245,8 +245,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Create receipt record
       const receiptData = {
         merchantName,
-        total: total.toString(), // Convert number to string for storage
-        date: new Date(),
+        total, // Keep as number since the storage will handle it properly
+        date: new Date().toISOString(), // Convert to ISO string to properly work with the timestamp type
         imageUrl: req.file.path,
         ocrText
       };
