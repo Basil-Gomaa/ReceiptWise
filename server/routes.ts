@@ -378,49 +378,121 @@ export async function registerRoutes(app: Express): Promise<Server> {
             console.log("Gemini AI OCR successful!");
             
             // Special handling for formatted Gemini responses
-            // Look for key-value pairs in the Gemini response
-            const merchantNameMatch = responseText.match(/(?:merchant|store)(?:[^:]*):([^*\n]+)/i);
-            if (merchantNameMatch && merchantNameMatch[1]) {
-              // Extract and clean merchant name from structured response
-              const extractedMerchantName = merchantNameMatch[1].trim();
-              
-              // Don't store the full Gemini response as merchant name
-              if (!extractedMerchantName.includes("extracted information from") && 
-                  !extractedMerchantName.includes("**")) {
-                merchantName = extractedMerchantName;
-                console.log("Extracted merchant name from Gemini format:", merchantName);
+            // Look for key-value pairs in the Gemini response using multiple patterns
+            const merchantPatterns = [
+              /merchant(?:[^:]*):[\s]*([^*\n]+)/i,              // Merchant: Value
+              /store(?:[^:]*):[\s]*([^*\n]+)/i,                 // Store: Value 
+              /merchant\/store name:[\s]*([^*\n]+)/i,           // Merchant/Store Name: Value
+              /\*\*merchant[^:]*\*\*:?\s+([^*\n]+)/i,           // **Merchant...**: Value
+              /\d+\.\s+\*\*merchant[^:]*:\*\*\s+([^*\n]+)/i     // 1. **Merchant...:** Value
+            ];
+            
+            // Try each pattern until we find a good match
+            for (const pattern of merchantPatterns) {
+              const match = responseText.match(pattern);
+              if (match && match[1]) {
+                const extractedName = match[1].trim()
+                  .replace(/\*\*/g, '')  // Remove markdown formatting
+                  .replace(/^["']|["']$/g, ''); // Remove quotes
+                
+                // Validate the extracted name
+                if (extractedName && 
+                    !extractedName.includes("extracted information") &&
+                    !extractedName.includes("Here's") &&
+                    extractedName.length < 100) {
+                  merchantName = extractedName;
+                  console.log("Extracted merchant name from Gemini format:", merchantName);
+                  break;
+                }
               }
             }
             
-            const totalMatch = responseText.match(/(?:total|amount)(?:[^:]*):([^*\n]+)/i);
-            if (totalMatch && totalMatch[1]) {
-              const totalStr = totalMatch[1].trim().replace(/[^\d.,]/g, '');
-              const extractedTotal = parseFloat(totalStr);
-              if (!isNaN(extractedTotal) && extractedTotal > 0) {
-                total = extractedTotal;
-                console.log("Extracted total amount from structured Gemini format:", total);
-                // This direct extraction is prioritized over the confidence-based system
+            // Multiple patterns for total amount extraction
+            const totalPatterns = [
+              /total(?:[^:]*):[\s]*([^*\n]+)/i,                // Total: Value
+              /amount(?:[^:]*):[\s]*([^*\n]+)/i,               // Amount: Value
+              /total amount(?:[^:]*):[\s]*([^*\n]+)/i,         // Total Amount: Value
+              /\*\*total[^:]*\*\*:?\s+([^*\n]+)/i,             // **Total...**: Value
+              /\d+\.\s+\*\*total[^:]*:\*\*\s+([^*\n]+)/i      // 3. **Total...:** Value
+            ];
+            
+            // Try each pattern until we find a good match
+            for (const pattern of totalPatterns) {
+              const match = responseText.match(pattern);
+              if (match && match[1]) {
+                const cleanTotalStr = match[1].trim()
+                  .replace(/\*\*/g, '')  // Remove markdown formatting
+                  .replace(/[^\d.,]/g, ''); // Keep only digits, decimal points, and commas
+                
+                const extractedTotal = parseFloat(cleanTotalStr);
+                if (!isNaN(extractedTotal) && extractedTotal > 0) {
+                  total = extractedTotal;
+                  console.log("Extracted total amount from Gemini format:", total);
+                  break;
+                }
               }
             }
             
-            const dateMatch = responseText.match(/(?:date)(?:[^:]*):([^*\n]+)/i);
-            if (dateMatch && dateMatch[1]) {
-              const dateStr = dateMatch[1].trim();
-              try {
-                // Parse European format date (DD.MM.YYYY)
-                const parts = dateStr.split('.');
-                if (parts.length === 3) {
-                  const day = parseInt(parts[0]);
-                  const month = parseInt(parts[1]) - 1; // JS months are 0-based
-                  const year = parseInt(parts[2]);
-                  const parsedDate = new Date(year, month, day);
-                  if (!isNaN(parsedDate.getTime())) {
+            // Multiple patterns for date extraction
+            const datePatterns = [
+              /date(?:[^:]*):[\s]*([^*\n]+)/i,                 // Date: Value
+              /\*\*date[^:]*\*\*:?\s+([^*\n]+)/i,              // **Date...**: Value
+              /\d+\.\s+\*\*date[^:]*:\*\*\s+([^*\n]+)/i        // 2. **Date...:** Value
+            ];
+            
+            // Try each pattern until we find a good match
+            for (const pattern of datePatterns) {
+              const match = responseText.match(pattern);
+              if (match && match[1]) {
+                const dateStr = match[1].trim()
+                  .replace(/\*\*/g, '')  // Remove markdown formatting
+                  .replace(/^["']|["']$/g, ''); // Remove quotes
+                  
+                try {
+                  let parsedDate;
+                  
+                  // Try different date formats
+                  
+                  // European format (DD.MM.YYYY)
+                  if (dateStr.includes('.')) {
+                    const parts = dateStr.split('.');
+                    if (parts.length === 3) {
+                      const day = parseInt(parts[0]);
+                      const month = parseInt(parts[1]) - 1; // JS months are 0-based
+                      const year = parseInt(parts[2]);
+                      if (year < 100) year += 2000; // Convert 2-digit years
+                      parsedDate = new Date(year, month, day);
+                    }
+                  } 
+                  // US/UK format (MM/DD/YYYY or DD/MM/YYYY)
+                  else if (dateStr.includes('/')) {
+                    const parts = dateStr.split('/');
+                    if (parts.length === 3) {
+                      // Assume European format (DD/MM/YYYY) first
+                      const day = parseInt(parts[0]);
+                      const month = parseInt(parts[1]) - 1;
+                      const year = parseInt(parts[2]);
+                      if (year < 100) year += 2000; // Convert 2-digit years
+                      parsedDate = new Date(year, month, day);
+                    }
+                  }
+                  // ISO format (YYYY-MM-DD)
+                  else if (dateStr.includes('-')) {
+                    parsedDate = new Date(dateStr);
+                  }
+                  // Try direct parsing as fallback
+                  else {
+                    parsedDate = new Date(dateStr);
+                  }
+                  
+                  if (parsedDate && !isNaN(parsedDate.getTime())) {
                     receiptDate = parsedDate;
                     console.log("Extracted date from Gemini format:", receiptDate);
+                    break;
                   }
+                } catch (e) {
+                  console.error("Failed to parse date from Gemini format:", e);
                 }
-              } catch (e) {
-                console.error("Failed to parse date from Gemini format:", e);
               }
             }
           } else {
