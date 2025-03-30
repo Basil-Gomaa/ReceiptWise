@@ -11,8 +11,8 @@ export default function TabNavigation() {
   // Mobile bottom navigation
   if (isMobile) {
     return (
-      <div className="fixed bottom-0 left-0 right-0 z-40 bg-background shadow-lg border-t border-border pb-safe">
-        <div className="flex items-center justify-around px-2 py-3">
+      <div className="fixed bottom-4 left-4 right-4 z-40 bg-background shadow-lg border border-border rounded-full pb-safe">
+        <div className="flex items-center justify-around px-4 py-3">
           <Link href="/">
             <div className={`flex flex-col items-center ${isActive("/") ? "text-primary font-medium" : "text-muted-foreground"}`}>
               <div className={`p-1.5 rounded-full ${isActive("/") ? "bg-primary/10" : ""}`}>

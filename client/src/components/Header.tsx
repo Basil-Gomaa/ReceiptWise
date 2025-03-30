@@ -75,13 +75,13 @@ export default function Header() {
             variant="ghost" 
             size="icon"
             onClick={toggleDarkMode}
-            className="rounded-full h-9 w-9"
+            className={`rounded-full h-9 w-9 ${!isDarkMode ? "bg-white shadow-sm border border-gray-100" : ""}`}
             aria-label="Toggle dark mode"
           >
             {isDarkMode ? (
-              <Sun className="h-[1.2rem] w-[1.2rem]" />
+              <Sun className="h-[1.2rem] w-[1.2rem] text-yellow-400" />
             ) : (
-              <Moon className="h-[1.2rem] w-[1.2rem]" />
+              <Moon className="h-[1.2rem] w-[1.2rem] text-gray-600" />
             )}
           </Button>
           

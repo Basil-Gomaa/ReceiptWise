@@ -51,13 +51,19 @@ export default function CategoryDistributionChart({ data }: CategoryDistribution
   const CustomTooltip = ({ active, payload }: any) => {
     if (active && payload && payload.length) {
       return (
-        <div className="bg-white dark:bg-gray-800 p-3 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700">
-          <p className="font-medium">{payload[0].name}</p>
-          <p className="text-primary-500 dark:text-primary-400 font-semibold">
+        <div className="bg-white dark:bg-gray-800 p-3 rounded-xl shadow-lg">
+          <div className="flex items-center gap-2">
+            <div 
+              className="w-3 h-3 rounded-full" 
+              style={{ backgroundColor: payload[0].payload.color }}
+            />
+            <p className="font-medium">{payload[0].name}</p>
+          </div>
+          <p className="text-primary font-semibold mt-1">
             {formatCurrency(payload[0].value)}
           </p>
-          <p className="text-xs text-gray-500 dark:text-gray-400">
-            {`${(payload[0].payload.percent * 100).toFixed(1)}% of total`}
+          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+            {`${(payload[0].payload.percent * 100).toFixed(1)}% of total spending`}
           </p>
         </div>
       );
