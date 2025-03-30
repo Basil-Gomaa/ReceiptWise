@@ -36,4 +36,13 @@
   .icon-button {
     @apply p-2 rounded-full text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-primary dark:hover:text-primary-foreground transition-colors duration-200;
   }
+  
+  /* Custom utility classes */
+  .bg-navy-blue {
+    @apply bg-blue-900 dark:bg-blue-950;
+  }
+  
+  .pb-safe {
+    padding-bottom: env(safe-area-inset-bottom, 0.5rem);
+  }
 }
