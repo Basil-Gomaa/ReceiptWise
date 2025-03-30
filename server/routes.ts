@@ -211,14 +211,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // RECEIPT UPLOAD & OCR ENDPOINT
   app.post("/api/upload", upload.single("receipt"), async (req: MulterRequest, res) => {
+    // Initialize receipt information variables first - before any processing happens
+    let merchantName = "Unknown";
+    let total = 0;
+    let notes = "";
+    let receiptDate: Date = new Date(); // Default to today's date
+    let ocrText = "";
+    let ocrError = "";
+    
     try {
       if (!req.file) {
         return res.status(400).json({ message: "No file uploaded" });
       }
       
       const filePath = req.file.path;
-      let ocrText = "";
-      let ocrError: string | undefined;
       
       // Helper function to convert file to base64
       const fileToBase64 = async (filePath: string): Promise<string> => {
@@ -301,7 +307,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 const responseText = result.response.text();
                 if (responseText) {
                   ocrText = responseText;
-                  ocrError = undefined; // Clear error since we successfully got text from Gemini
+                  ocrError = ""; // Clear error since we successfully got text from Gemini
                   console.log("Gemini AI OCR successful!");
                 } else {
                   ocrError = "Both Google Vision and Gemini AI failed to extract text from the receipt.";
@@ -370,6 +376,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
           if (responseText) {
             ocrText = responseText;
             console.log("Gemini AI OCR successful!");
+            
+            // Special handling for formatted Gemini responses
+            // Look for key-value pairs in the Gemini response
+            const merchantNameMatch = responseText.match(/(?:merchant|store)(?:[^:]*):([^*\n]+)/i);
+            if (merchantNameMatch && merchantNameMatch[1]) {
+              merchantName = merchantNameMatch[1].trim();
+              console.log("Extracted merchant name from Gemini format:", merchantName);
+            }
+            
+            const totalMatch = responseText.match(/(?:total|amount)(?:[^:]*):([^*\n]+)/i);
+            if (totalMatch && totalMatch[1]) {
+              const totalStr = totalMatch[1].trim().replace(/[^\d.,]/g, '');
+              total = parseFloat(totalStr);
+              if (!isNaN(total)) {
+                console.log("Extracted total amount from Gemini format:", total);
+              }
+            }
+            
+            const dateMatch = responseText.match(/(?:date)(?:[^:]*):([^*\n]+)/i);
+            if (dateMatch && dateMatch[1]) {
+              const dateStr = dateMatch[1].trim();
+              try {
+                // Parse European format date (DD.MM.YYYY)
+                const parts = dateStr.split('.');
+                if (parts.length === 3) {
+                  const day = parseInt(parts[0]);
+                  const month = parseInt(parts[1]) - 1; // JS months are 0-based
+                  const year = parseInt(parts[2]);
+                  const parsedDate = new Date(year, month, day);
+                  if (!isNaN(parsedDate.getTime())) {
+                    receiptDate = parsedDate;
+                    console.log("Extracted date from Gemini format:", receiptDate);
+                  }
+                }
+              } catch (e) {
+                console.error("Failed to parse date from Gemini format:", e);
+              }
+            }
           } else {
             ocrError = "Gemini AI failed to extract text from the receipt.";
           }
@@ -381,11 +425,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         ocrError = "No OCR services available. Please configure either Google Vision API or Gemini API.";
       }
       
-      // Extract receipt information
-      let merchantName = ocrError ? "Receipt Upload - Needs Manual Entry" : "Unknown";
-      let total = 0;
-      let notes = ocrError ? "OCR processing failed. Please enter receipt details manually." : "";
-      let receiptDate: Date = new Date(); // Default to today's date
+      // Update variable values based on OCR error
+      if (ocrError) {
+        merchantName = "Receipt Upload - Needs Manual Entry";
+        notes = "OCR processing failed. Please enter receipt details manually.";
+      }
       
       // Extract information from OCR text
       if (ocrText) {
