@@ -8,6 +8,32 @@
   }
 
   body {
-    @apply font-sans antialiased bg-background text-foreground;
+    @apply font-sans antialiased bg-background text-foreground transition-colors duration-200;
+  }
+  
+  .dark {
+    --tw-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.2), 0 2px 4px -1px rgba(0, 0, 0, 0.1);
+  }
+}
+
+@layer components {
+  .card-hover {
+    @apply transition-all duration-200 hover:shadow-lg dark:hover:shadow-2xl dark:hover:shadow-primary/10;
+  }
+  
+  .glass-effect {
+    @apply bg-white/80 dark:bg-gray-900/90 backdrop-blur-sm border border-gray-200/50 dark:border-gray-700/50;
+  }
+  
+  .gradient-bg {
+    @apply bg-gradient-to-br from-primary/5 to-primary/10 dark:from-gray-900 dark:to-gray-800;
+  }
+  
+  .active-nav-item {
+    @apply bg-primary/10 text-primary dark:bg-primary/20 dark:text-primary-foreground;
+  }
+  
+  .icon-button {
+    @apply p-2 rounded-full text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-primary dark:hover:text-primary-foreground transition-colors duration-200;
   }
 }

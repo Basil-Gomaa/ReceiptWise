@@ -9,6 +9,7 @@ import { Calendar, Download, Search, SlidersHorizontal } from "lucide-react";
 import FileUploader from "@/components/FileUploader";
 import OcrProcessingUI from "@/components/OcrProcessingUI";
 import ReceiptCard from "@/components/ReceiptCard";
+import AddReceiptModal from "@/components/AddReceiptModal";
 import { formatCurrency } from "@/lib/utils";
 
 // Type definitions for the API responses
@@ -225,25 +226,23 @@ export default function Receipts() {
   return (
     <div className="receipts-tab">
       {/* Upload Section */}
-      <div className="mb-8">
-        <Card>
-          <CardContent className="p-6">
-            <h2 className="text-xl font-semibold mb-4">Upload Receipt</h2>
-            
-            <FileUploader 
-              onFileSelect={handleFileUpload} 
-              isUploading={isUploading} 
-            />
-            
-            {/* OCR Processing UI */}
-            {isUploading && (
-              <OcrProcessingUI 
-                progress={ocrProgress} 
-                errorMessage={ocrError} 
-              />
-            )}
-          </CardContent>
-        </Card>
+      <div className="mb-8 flex justify-between items-center">
+        <h1 className="text-2xl font-bold">Your Receipts</h1>
+        <AddReceiptModal categories={categories} />
+        
+        {/* OCR Processing UI */}
+        {isUploading && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <Card className="w-full max-w-md">
+              <CardContent className="p-6">
+                <OcrProcessingUI 
+                  progress={ocrProgress} 
+                  errorMessage={ocrError} 
+                />
+              </CardContent>
+            </Card>
+          </div>
+        )}
       </div>
       
       {/* Receipt List Section */}

@@ -1,51 +1,127 @@
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
-import { FilePenLine } from "lucide-react";
+import { 
+  ReceiptText, 
+  Moon, 
+  Sun, 
+  Settings, 
+  BellRing, 
+  Sparkles, 
+  LogOut, 
+  Upload, 
+  PlusCircle 
+} from "lucide-react";
 import { useDarkMode } from "@/hooks/useDarkMode";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { Separator } from "@/components/ui/separator";
 
 export default function Header() {
   const { isDarkMode, toggleDarkMode } = useDarkMode();
+  const isMobile = useIsMobile();
 
   return (
-    <header className="sticky top-0 z-10 bg-white dark:bg-gray-800 shadow-sm">
-      <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-        <div className="flex items-center space-x-2">
-          <FilePenLine className="h-8 w-8 text-primary-500" />
+    <header className="sticky top-0 z-50 bg-background/80 backdrop-blur-md border-b border-border/40 shadow-sm">
+      <div className="container mx-auto px-4 h-16 flex items-center justify-between">
+        {/* Logo */}
+        <div className="flex items-center">
           <Link href="/">
-            <h1 className="text-xl font-bold cursor-pointer">ReceiptScanner</h1>
+            <div className="flex items-center gap-2 hover:opacity-80 transition-opacity">
+              <div className="flex items-center justify-center w-9 h-9 rounded-xl bg-primary text-primary-foreground shadow-sm">
+                <ReceiptText className="h-5 w-5" />
+              </div>
+              <h1 className="text-xl font-bold text-foreground hidden sm:block tracking-tight">
+                Receipt<span className="text-primary">Scanner</span>
+              </h1>
+            </div>
           </Link>
+          
+          {!isMobile && (
+            <>
+              <Separator orientation="vertical" className="mx-4 h-6" />
+              <nav className="space-x-1">
+                <Button variant="ghost" size="sm" className="text-sm font-medium rounded-md" asChild>
+                  <Link href="/">Dashboard</Link>
+                </Button>
+                <Button variant="ghost" size="sm" className="text-sm font-medium rounded-md" asChild>
+                  <Link href="/receipts">Receipts</Link>
+                </Button>
+                <Button variant="ghost" size="sm" className="text-sm font-medium rounded-md" asChild>
+                  <Link href="/categories">Categories</Link>
+                </Button>
+              </nav>
+            </>
+          )}
         </div>
-        
-        <div className="flex items-center space-x-4">
+
+        {/* Action Buttons */}
+        <div className="flex items-center gap-2">
+          {!isMobile && (
+            <Button size="sm" className="gap-1.5 h-9 rounded-md">
+              <Upload className="h-4 w-4" />
+              <span>Upload Receipt</span>
+            </Button>
+          )}
+          
           <Button 
             variant="ghost" 
             size="icon"
             onClick={toggleDarkMode}
-            className="rounded-full"
+            className="rounded-full h-9 w-9"
+            aria-label="Toggle dark mode"
           >
-            {/* Sun icon for dark mode */}
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 hidden dark:block" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
-            </svg>
-            {/* Moon icon for light mode */}
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 block dark:hidden" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
-            </svg>
+            {isDarkMode ? (
+              <Sun className="h-[1.2rem] w-[1.2rem]" />
+            ) : (
+              <Moon className="h-[1.2rem] w-[1.2rem]" />
+            )}
           </Button>
           
-          <div className="relative">
-            <Button 
-              variant="ghost" 
-              className="flex items-center space-x-1 p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700"
-            >
-              <div className="h-8 w-8 rounded-full bg-primary-100 dark:bg-primary-900 flex items-center justify-center text-primary-500">
-                <span className="text-sm font-medium">JD</span>
-              </div>
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
-              </svg>
-            </Button>
-          </div>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" className="rounded-full p-0 h-9 w-9">
+                <Avatar className="h-8 w-8 border border-border">
+                  <AvatarFallback className="bg-primary/10 text-primary text-sm font-medium">
+                    JS
+                  </AvatarFallback>
+                </Avatar>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-56 rounded-xl p-2">
+              <DropdownMenuLabel className="font-normal">
+                <div className="flex flex-col space-y-1">
+                  <p className="text-sm font-medium">John Smith</p>
+                  <p className="text-xs text-muted-foreground">john.smith@example.com</p>
+                </div>
+              </DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem className="cursor-pointer rounded-lg">
+                <Settings className="mr-2 h-4 w-4" />
+                <span>Settings</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem className="cursor-pointer rounded-lg">
+                <PlusCircle className="mr-2 h-4 w-4" />
+                <span>New Receipt</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem className="cursor-pointer rounded-lg">
+                <Sparkles className="mr-2 h-4 w-4" />
+                <span>Upgrade Plan</span>
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem className="cursor-pointer rounded-lg text-destructive focus:text-destructive">
+                <LogOut className="mr-2 h-4 w-4" />
+                <span>Log out</span>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
     </header>

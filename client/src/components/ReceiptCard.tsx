@@ -1,7 +1,17 @@
 import { motion } from "framer-motion";
-import { Calendar, PencilLine, Trash2 } from "lucide-react";
+import { Calendar, PencilLine, Trash2, Eye, ReceiptText, Tag, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { formatCurrency } from "@/lib/utils";
+import { 
+  Card, 
+  CardHeader, 
+  CardTitle, 
+  CardDescription, 
+  CardContent, 
+  CardFooter 
+} from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
+import { formatCurrency, formatDateString } from "@/lib/utils";
 
 interface ReceiptCardProps {
   receipt: {
@@ -22,92 +32,128 @@ interface ReceiptCardProps {
 }
 
 export default function ReceiptCard({ receipt, category, onDelete, onEdit }: ReceiptCardProps) {
-  const formattedDate = new Date(receipt.date).toLocaleDateString();
-  const formattedTime = new Date(receipt.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-  
-  // Check if this receipt likely needs manual data entry
+  const formattedDate = formatDateString(receipt.date);
   const needsManualEntry = receipt.merchantName.includes("Needs Manual Entry") || 
                           (receipt.notes && receipt.notes.includes("OCR processing failed")) ||
                           receipt.total === 0;
 
+  // Extract product information from receipt notes if available
+  const hasProducts = receipt.notes && receipt.notes.includes("Products detected:");
+  const products = hasProducts && receipt.notes
+    ? receipt.notes?.replace("Products detected:", "").replace(/\.$/, "").trim().split(', ')
+    : [];
+
   return (
     <motion.div 
-      className={`receipt-card ${needsManualEntry ? 'border-2 border-orange-300 dark:border-orange-600' : ''} bg-gray-50 dark:bg-gray-700 rounded-lg overflow-hidden shadow-sm hover:shadow-md`}
-      whileHover={{ y: -4 }}
+      whileHover={{ y: -4, boxShadow: "0 10px 15px -3px rgba(0, 0, 0, 0.1)" }}
       transition={{ duration: 0.2 }}
+      className="h-full"
     >
-      {needsManualEntry && (
-        <div className="bg-orange-100 dark:bg-orange-900/30 p-2 text-orange-800 dark:text-orange-300 text-sm text-center">
-          This receipt needs manual data entry
-        </div>
-      )}
-      <div className="p-4 border-b border-gray-200 dark:border-gray-600">
-        <div className="flex justify-between items-center">
-          <h3 className="font-medium">{receipt.merchantName}</h3>
-          {category ? (
-            <span 
-              className="text-xs font-semibold px-2.5 py-0.5 rounded"
-              style={{ 
-                backgroundColor: `${category.color}20`, 
-                color: category.color 
-              }}
-            >
-              {category.name}
-            </span>
-          ) : (
-            <span className="bg-gray-100 text-gray-800 dark:bg-gray-600 dark:text-gray-300 text-xs font-semibold px-2.5 py-0.5 rounded">
-              Uncategorized
-            </span>
-          )}
-        </div>
-        <p className="text-2xl font-bold mt-2">{formatCurrency(receipt.total)}</p>
-        <div className="flex justify-between items-center mt-2 text-sm text-gray-500 dark:text-gray-400">
-          <span>{formattedDate}</span>
-          <span>{formattedTime}</span>
-        </div>
-        
-        {receipt.notes && (
-          <div className="mt-2 text-sm">
-            {receipt.notes.includes("Products detected:") ? (
-              <div>
-                <p className="text-gray-600 dark:text-gray-300 font-medium">Items:</p>
-                <p className="text-gray-600 dark:text-gray-300">
-                  {receipt.notes.replace("Products detected:", "").replace(/\.$/, "").trim()}
-                </p>
-              </div>
-            ) : (
-              <p className="text-gray-600 dark:text-gray-300 italic">{receipt.notes}</p>
-            )}
+      <Card className={`card-hover h-full ${needsManualEntry ? 'border-2 border-amber-400 dark:border-amber-600' : ''} overflow-hidden`}>
+        {needsManualEntry && (
+          <div className="bg-amber-100 dark:bg-amber-900/30 p-2 text-amber-800 dark:text-amber-300 text-xs font-medium text-center flex items-center justify-center gap-1">
+            <PencilLine className="h-3 w-3" />
+            Needs manual data entry
           </div>
         )}
-      </div>
-      <div className="p-4 flex justify-between items-center">
-        <Button 
-          variant="ghost" 
-          size="sm"
-          className="text-gray-500 dark:text-gray-400 hover:text-primary-500 dark:hover:text-primary-400 text-sm font-medium"
-        >
-          View Details
-        </Button>
-        <div className="flex space-x-2">
-          <Button 
-            variant={needsManualEntry ? "outline" : "ghost"}
-            size="icon"
-            className={`p-1 rounded-full ${needsManualEntry ? 'border-orange-300 bg-orange-50 text-orange-600 dark:bg-orange-900/20 dark:border-orange-700 dark:text-orange-400 animate-pulse' : 'hover:bg-gray-200 dark:hover:bg-gray-600'}`}
-            onClick={onEdit}
-          >
-            <PencilLine className={`h-5 w-5 ${needsManualEntry ? 'text-orange-600 dark:text-orange-400' : 'text-gray-500 dark:text-gray-400'}`} />
-          </Button>
+        
+        <CardHeader className="p-4 pb-1">
+          <div className="flex justify-between items-start">
+            <div className="w-3/4">
+              <CardTitle className="text-base font-semibold line-clamp-1">
+                {receipt.merchantName}
+              </CardTitle>
+              <CardDescription className="text-xs mt-0.5 flex items-center gap-1">
+                <Calendar className="h-3 w-3" />
+                {formattedDate}
+              </CardDescription>
+            </div>
+            <div>
+              {category ? (
+                <Badge 
+                  className="font-medium text-xs" 
+                  style={{ backgroundColor: category.color, color: 'white' }}
+                >
+                  {category.name}
+                </Badge>
+              ) : (
+                <Badge variant="outline" className="text-xs">
+                  Uncategorized
+                </Badge>
+              )}
+            </div>
+          </div>
+        </CardHeader>
+        
+        <CardContent className="p-4 pt-2">
+          <div className="flex justify-between items-center mt-2">
+            <div className="flex items-center gap-1 text-xs text-muted-foreground">
+              <ReceiptText className="h-3 w-3" />
+              <span>Receipt #{receipt.id}</span>
+            </div>
+            <p className="text-2xl font-bold text-primary">
+              {formatCurrency(receipt.total)}
+            </p>
+          </div>
+          
+          {hasProducts && products.length > 0 && (
+            <div className="mt-3">
+              <Separator className="my-2" />
+              <div className="flex flex-wrap gap-1.5 mt-2">
+                {products.map((product, index) => (
+                  <Badge 
+                    key={index} 
+                    variant="secondary" 
+                    className="text-xs font-normal bg-primary/5 text-primary-foreground/90"
+                  >
+                    {product}
+                  </Badge>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {!hasProducts && receipt.notes && (
+            <div className="mt-3">
+              <Separator className="my-2" />
+              <p className="text-xs text-muted-foreground italic line-clamp-2">
+                {receipt.notes}
+              </p>
+            </div>
+          )}
+        </CardContent>
+        
+        <CardFooter className="p-3 pt-0 flex justify-between items-center">
           <Button 
             variant="ghost" 
-            size="icon"
-            className="p-1 rounded-full hover:bg-gray-200 dark:hover:bg-gray-600"
-            onClick={onDelete}
+            size="sm"
+            className="text-xs font-medium flex items-center gap-1.5 h-8 px-2.5"
           >
-            <Trash2 className="h-5 w-5 text-gray-500 dark:text-gray-400" />
+            <Eye className="h-3.5 w-3.5" />
+            Details
           </Button>
-        </div>
-      </div>
+          
+          <div className="flex gap-1">
+            <Button 
+              variant={needsManualEntry ? "default" : "ghost"}
+              size="sm"
+              className={`h-8 w-8 p-0 ${needsManualEntry ? 'bg-amber-500 hover:bg-amber-600 text-white' : 'hover:bg-primary/5 text-muted-foreground hover:text-foreground'}`}
+              onClick={onEdit}
+            >
+              <PencilLine className="h-3.5 w-3.5" />
+            </Button>
+            
+            <Button 
+              variant="ghost" 
+              size="sm"
+              className="h-8 w-8 p-0 hover:bg-destructive/10 text-muted-foreground hover:text-destructive"
+              onClick={onDelete}
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+            </Button>
+          </div>
+        </CardFooter>
+      </Card>
     </motion.div>
   );
 }

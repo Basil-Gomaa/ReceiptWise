@@ -1,56 +1,62 @@
 import { Link, useLocation } from "wouter";
-import { BarChart, FilePenLine, Tag, Settings as SettingsIcon } from "lucide-react";
+import { BarChart, ReceiptText, Tags, Settings as SettingsIcon, PieChart } from "lucide-react";
 
 export default function TabNavigation() {
   const [location] = useLocation();
 
-  const getTabClassName = (path: string) => {
-    const baseClassName = "inline-block p-4 border-b-2 font-medium ";
-    const activeClassName = "border-primary-500 text-primary-600 dark:text-primary-400";
-    const inactiveClassName = "border-transparent hover:border-gray-300 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300";
-    
-    return baseClassName + (location === path ? activeClassName : inactiveClassName);
-  };
+  const isActive = (path: string) => location === path;
 
   return (
-    <div className="mb-8 border-b border-gray-200 dark:border-gray-700">
-      <ul className="flex flex-wrap -mb-px">
-        <li className="mr-2">
-          <Link href="/" className={getTabClassName("/")}>
-            <span className="flex items-center">
-              <BarChart className="h-5 w-5 mr-2" />
-              Dashboard
-            </span>
-          </Link>
-        </li>
+    <div className="mb-8 flex justify-center sm:justify-start">
+      <div className="glass-effect rounded-full p-1.5 flex items-center justify-between gap-1 shadow-sm">
+        <Link href="/">
+          <div className={`
+            flex items-center gap-2 px-4 py-2 rounded-full transition-all duration-200
+            ${isActive("/") 
+              ? "active-nav-item" 
+              : "text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"}
+          `}>
+            <PieChart className="h-4 w-4" />
+            <span className="text-sm font-medium hidden sm:inline">Dashboard</span>
+          </div>
+        </Link>
         
-        <li className="mr-2">
-          <Link href="/receipts" className={getTabClassName("/receipts")}>
-            <span className="flex items-center">
-              <FilePenLine className="h-5 w-5 mr-2" />
-              Receipts
-            </span>
-          </Link>
-        </li>
+        <Link href="/receipts">
+          <div className={`
+            flex items-center gap-2 px-4 py-2 rounded-full transition-all duration-200
+            ${isActive("/receipts") 
+              ? "active-nav-item" 
+              : "text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"}
+          `}>
+            <ReceiptText className="h-4 w-4" />
+            <span className="text-sm font-medium hidden sm:inline">Receipts</span>
+          </div>
+        </Link>
         
-        <li className="mr-2">
-          <Link href="/categories" className={getTabClassName("/categories")}>
-            <span className="flex items-center">
-              <Tag className="h-5 w-5 mr-2" />
-              Categories
-            </span>
-          </Link>
-        </li>
+        <Link href="/categories">
+          <div className={`
+            flex items-center gap-2 px-4 py-2 rounded-full transition-all duration-200
+            ${isActive("/categories") 
+              ? "active-nav-item" 
+              : "text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"}
+          `}>
+            <Tags className="h-4 w-4" />
+            <span className="text-sm font-medium hidden sm:inline">Categories</span>
+          </div>
+        </Link>
         
-        <li className="mr-2">
-          <Link href="/settings" className={getTabClassName("/settings")}>
-            <span className="flex items-center">
-              <SettingsIcon className="h-5 w-5 mr-2" />
-              Settings
-            </span>
-          </Link>
-        </li>
-      </ul>
+        <Link href="/settings">
+          <div className={`
+            flex items-center gap-2 px-4 py-2 rounded-full transition-all duration-200
+            ${isActive("/settings") 
+              ? "active-nav-item" 
+              : "text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"}
+          `}>
+            <SettingsIcon className="h-4 w-4" />
+            <span className="text-sm font-medium hidden sm:inline">Settings</span>
+          </div>
+        </Link>
+      </div>
     </div>
   );
 }
