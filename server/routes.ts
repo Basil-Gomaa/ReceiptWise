@@ -208,6 +208,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const filePath = req.file.path;
       let ocrText = "";
+      let ocrError: string | undefined;
       
       // Perform OCR if Vision client is available
       if (visionClient) {
@@ -217,10 +218,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
           if (detections && detections.length > 0) {
             ocrText = detections[0].description || "";
           }
-        } catch (error) {
+        } catch (error: any) {
           console.error("OCR processing error:", error);
-          ocrText = "Error processing OCR";
+          
+          // Check if this is a permission/API not enabled error
+          const errorMessage = error.toString();
+          if (errorMessage.includes("PERMISSION_DENIED") || 
+              errorMessage.includes("API has not been used") || 
+              errorMessage.includes("it is disabled")) {
+            ocrError = "Google Vision API not properly enabled. Please enable the API in your Google Cloud Console.";
+          } else {
+            ocrError = "Error processing OCR. Technical details: " + (error.message || 'Unknown error');
+          }
         }
+      } else {
+        ocrError = "Google Vision API client not available. Check your API key configuration.";
       }
       
       // Extract receipt information
@@ -245,8 +257,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Create receipt record
       const receiptData = {
         merchantName,
-        total, // Keep as number since the storage will handle it properly
-        date: new Date().toISOString(), // Convert to ISO string to properly work with the timestamp type
+        total: total.toString(), // Convert to string as required by the schema
+        date: new Date(), // Use Date object as required by the schema
         imageUrl: req.file.path,
         ocrText
       };
@@ -256,13 +268,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Clean up file
       try {
         await fs.unlink(filePath);
-      } catch (error) {
+      } catch (error: any) {
         console.error("Error deleting temporary file:", error);
       }
       
       res.status(201).json({
         ...newReceipt,
-        ocrText
+        ocrText,
+        ocrError
       });
     } catch (error) {
       handleError(res, error);

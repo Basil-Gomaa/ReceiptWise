@@ -11,38 +11,91 @@ import OcrProcessingUI from "@/components/OcrProcessingUI";
 import ReceiptCard from "@/components/ReceiptCard";
 import { formatCurrency } from "@/lib/utils";
 
+// Type definitions for the API responses
+interface Receipt {
+  id: number;
+  merchantName: string;
+  total: number;
+  date: string;
+  categoryId?: number;
+  notes?: string;
+  imageUrl?: string;
+}
+
+interface Category {
+  id: number;
+  name: string;
+  color: string;
+  icon?: string;
+}
+
+interface UploadResponse {
+  ocrError?: string;
+  receipt?: Receipt;
+}
+
 export default function Receipts() {
   const { toast } = useToast();
   const [isUploading, setIsUploading] = useState(false);
   const [ocrProgress, setOcrProgress] = useState(0);
+  const [ocrError, setOcrError] = useState<string | undefined>(undefined);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("all");
 
   // Fetch receipts and categories
-  const { data: receipts, isLoading: receiptsLoading } = useQuery({
+  const { data: receipts = [], isLoading: receiptsLoading } = useQuery<Receipt[]>({
     queryKey: ["/api/receipts"],
   });
 
-  const { data: categories, isLoading: categoriesLoading } = useQuery({
+  const { data: categories = [], isLoading: categoriesLoading } = useQuery<Category[]>({
     queryKey: ["/api/categories"],
   });
 
   // Mutation for uploading receipts
-  const uploadMutation = useMutation({
+  const uploadMutation = useMutation<UploadResponse, Error, FormData>({
     mutationFn: async (formData: FormData) => {
-      const response = await apiRequest("POST", "/api/upload", formData);
-      return response.json();
+      try {
+        const response = await apiRequest("POST", "/api/upload", formData);
+        const data = await response.json() as UploadResponse;
+        
+        // Handle case where the API returned success but with OCR errors
+        if (data.ocrError) {
+          setOcrError(data.ocrError);
+          // We still return the data since the receipt was saved
+          return data;
+        }
+        
+        return data;
+      } catch (error: any) {
+        // Set the OCR error message
+        setOcrError(error.message);
+        throw error;
+      }
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["/api/receipts"] });
       queryClient.invalidateQueries({ queryKey: ["/api/analytics/monthly"] });
       queryClient.invalidateQueries({ queryKey: ["/api/analytics/categories"] });
-      toast({
-        title: "Receipt uploaded successfully",
-        description: "Your receipt has been processed and added to your expenses.",
-      });
-      setIsUploading(false);
-      setOcrProgress(0);
+      
+      // If there was an OCR error, show a warning toast
+      if (data.ocrError) {
+        toast({
+          title: "Receipt uploaded with limitations",
+          description: "Your receipt was saved, but automatic data extraction failed. You can edit details manually.",
+        });
+      } else {
+        toast({
+          title: "Receipt uploaded successfully",
+          description: "Your receipt has been processed and added to your expenses.",
+        });
+      }
+      
+      // Reset states after a delay to show completion
+      setTimeout(() => {
+        setIsUploading(false);
+        setOcrProgress(0);
+        setOcrError(undefined);
+      }, 1500);
     },
     onError: (error: Error) => {
       toast({
@@ -50,8 +103,13 @@ export default function Receipts() {
         description: error.message,
         variant: "destructive",
       });
-      setIsUploading(false);
-      setOcrProgress(0);
+      
+      // Reset states after a delay
+      setTimeout(() => {
+        setIsUploading(false);
+        setOcrProgress(0);
+        setOcrError(undefined);
+      }, 2000);
     },
   });
 
@@ -89,7 +147,7 @@ export default function Receipts() {
   };
 
   // Delete receipt mutation
-  const deleteMutation = useMutation({
+  const deleteMutation = useMutation<number, Error, number>({
     mutationFn: async (id: number) => {
       await apiRequest("DELETE", `/api/receipts/${id}`);
       return id;
@@ -120,17 +178,15 @@ export default function Receipts() {
   };
 
   // Filter receipts based on search and category
-  const filteredReceipts = receipts 
-    ? receipts.filter((receipt: any) => {
-        const matchesSearch = searchQuery === "" || 
-          receipt.merchantName.toLowerCase().includes(searchQuery.toLowerCase());
-        
-        const matchesCategory = selectedCategory === "all" || 
-          receipt.categoryId === parseInt(selectedCategory);
-        
-        return matchesSearch && matchesCategory;
-      })
-    : [];
+  const filteredReceipts = receipts.filter((receipt: Receipt) => {
+    const matchesSearch = searchQuery === "" || 
+      receipt.merchantName.toLowerCase().includes(searchQuery.toLowerCase());
+    
+    const matchesCategory = selectedCategory === "all" || 
+      receipt.categoryId === parseInt(selectedCategory);
+    
+    return matchesSearch && matchesCategory;
+  });
 
   // Export receipts as CSV
   const handleExportCsv = async () => {
@@ -160,7 +216,10 @@ export default function Receipts() {
             
             {/* OCR Processing UI */}
             {isUploading && (
-              <OcrProcessingUI progress={ocrProgress} />
+              <OcrProcessingUI 
+                progress={ocrProgress} 
+                errorMessage={ocrError} 
+              />
             )}
           </CardContent>
         </Card>
@@ -189,7 +248,7 @@ export default function Receipts() {
               onChange={(e) => setSelectedCategory(e.target.value)}
             >
               <option value="all">All Categories</option>
-              {categories && categories.map((category: any) => (
+              {categories.map((category: Category) => (
                 <option key={category.id} value={category.id}>
                   {category.name}
                 </option>
@@ -210,8 +269,8 @@ export default function Receipts() {
           </div>
         ) : filteredReceipts.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 p-6">
-            {filteredReceipts.map((receipt: any) => {
-              const category = categories?.find((cat: any) => cat.id === receipt.categoryId);
+            {filteredReceipts.map((receipt: Receipt) => {
+              const category = categories.find((cat: Category) => cat.id === receipt.categoryId);
               
               return (
                 <ReceiptCard
@@ -235,7 +294,7 @@ export default function Receipts() {
           </div>
         )}
         
-        {receipts && receipts.length > 0 && (
+        {receipts.length > 0 && (
           <div className="px-6 py-4 border-t border-gray-200 dark:border-gray-700 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
             <div className="text-sm text-gray-500 dark:text-gray-400">
               Showing <span className="font-medium">
