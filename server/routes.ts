@@ -459,7 +459,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                     if (parts.length === 3) {
                       const day = parseInt(parts[0]);
                       const month = parseInt(parts[1]) - 1; // JS months are 0-based
-                      const year = parseInt(parts[2]);
+                      let year = parseInt(parts[2]);
                       if (year < 100) year += 2000; // Convert 2-digit years
                       parsedDate = new Date(year, month, day);
                     }
@@ -471,7 +471,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                       // Assume European format (DD/MM/YYYY) first
                       const day = parseInt(parts[0]);
                       const month = parseInt(parts[1]) - 1;
-                      const year = parseInt(parts[2]);
+                      let year = parseInt(parts[2]);
                       if (year < 100) year += 2000; // Convert 2-digit years
                       parsedDate = new Date(year, month, day);
                     }
@@ -766,10 +766,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
             
 
         
-        // Add extracted text to notes for reference
+        // Add user-friendly notes
         if (!ocrError) {
-          notes = "OCR text extracted. You can edit this receipt if any details are incorrect.";
-          notes += " Extracted text: " + ocrText.slice(0, 200) + (ocrText.length > 200 ? "..." : "");
+          notes = "Receipt details automatically detected. Please review and edit if needed.";
         }
       }
       
