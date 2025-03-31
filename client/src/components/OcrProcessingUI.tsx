@@ -53,6 +53,33 @@ export default function OcrProcessingUI({ progress, errorMessage }: OcrProcessin
     } else if (errorMessage) {
       return "text-red-600 dark:text-red-400";
     } else {
+      return "text-gray-600 dark:text-gray-400";
+    }
+  };
+
+  return (
+    <div className={`rounded-lg p-4 mb-4 ${getCardStyles()}`}>
+      <div className="flex items-center">
+        {getStatusIcon()}
+        <div>
+          <h3 className="text-lg font-semibold mb-1">{getStatusTitle()}</h3>
+          <p className={`text-sm ${getTextColor()}`}>
+            {errorMessage || "Analyzing receipt content..."}
+          </p>
+          {!errorMessage && (
+            <div className="w-full bg-gray-200 dark:bg-gray-600 h-1 mt-2 rounded-full overflow-hidden">
+              <div 
+                className="bg-primary-500 h-full rounded-full transition-all duration-300"
+                style={{ width: `${progress}%` }}
+              />
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+      return "text-red-600 dark:text-red-400";
+    } else {
       return "text-gray-500 dark:text-gray-400";
     }
   };
