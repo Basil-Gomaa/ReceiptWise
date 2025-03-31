@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Sparkles } from 'lucide-react';
 import { motion } from 'framer-motion';
 
@@ -126,37 +125,33 @@ export default function FinancialMoodIndicator({
   const animation = getMoodAnimation();
 
   return (
-    <Card className="shadow-md bg-white dark:bg-[#0f172a]/80 border-0 overflow-hidden">
-      <CardHeader className="pb-0">
-        <CardTitle className="text-lg font-medium text-center">Financial Mood</CardTitle>
-      </CardHeader>
+    <div className="flex flex-col items-center justify-center py-6">
+      <h3 className="text-lg font-medium text-center mb-4">Financial Mood</h3>
       
-      <CardContent className="flex flex-col items-center justify-center py-6">
-        <motion.div 
-          {...animation}
-          className="mb-4"
-        >
-          <span className="text-8xl" role="img" aria-label="Mood Emoji">
-            {getMoodEmoji()}
-          </span>
-        </motion.div>
-        
-        <div className={`text-xl font-bold ${getMoodColor()} mb-1`}>
-          {mood === 'happy' ? 'Happy' : 
-           mood === 'neutral' ? 'Neutral' : 
-           mood === 'sad' ? 'Sad' : 'Unknown'}
-        </div>
-        
-        <motion.div 
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3 }}
-          className="mt-2 flex items-center gap-1 text-xs font-medium text-purple-500 dark:text-purple-400"
-        >
-          <Sparkles className="h-3 w-3" />
-          <span>AI Powered</span>
-        </motion.div>
-      </CardContent>
-    </Card>
+      <motion.div 
+        {...animation}
+        className="mb-4"
+      >
+        <span className="text-9xl" role="img" aria-label="Mood Emoji">
+          {getMoodEmoji()}
+        </span>
+      </motion.div>
+      
+      <div className={`text-xl font-bold ${getMoodColor()} mb-2`}>
+        {mood === 'happy' ? 'Happy' : 
+         mood === 'neutral' ? 'Neutral' : 
+         mood === 'sad' ? 'Sad' : 'Unknown'}
+      </div>
+      
+      <motion.div 
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.3 }}
+        className="mt-1 flex items-center gap-1 text-xs font-medium text-purple-500 dark:text-purple-400"
+      >
+        <Sparkles className="h-3 w-3" />
+        <span>AI Powered</span>
+      </motion.div>
+    </div>
   );
 }
