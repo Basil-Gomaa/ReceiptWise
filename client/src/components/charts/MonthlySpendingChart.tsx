@@ -8,6 +8,7 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import { formatCurrency } from "@/lib/utils";
+import { useTheme } from "@/contexts/ExpenseContext";
 
 interface MonthlySpendingChartProps {
   data: Array<{
@@ -17,6 +18,9 @@ interface MonthlySpendingChartProps {
 }
 
 export default function MonthlySpendingChart({ data }: MonthlySpendingChartProps) {
+  // Get the current theme state
+  const { isDarkMode } = useTheme();
+  
   // Format data for display
   const chartData = data.map(item => {
     // Convert YYYY-MM to Month abbreviation
@@ -48,31 +52,37 @@ export default function MonthlySpendingChart({ data }: MonthlySpendingChartProps
           bottom: 20,
         }}
       >
-        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
+        <CartesianGrid 
+          strokeDasharray="3 3" 
+          vertical={false} 
+          stroke={isDarkMode ? "#2d3748" : "#f0f0f0"} 
+        />
         <XAxis 
           dataKey="name" 
           tickLine={false}
           axisLine={false}
-          tick={{ fontSize: 11, fill: "#888" }}
+          tick={{ fontSize: 11, fill: isDarkMode ? "#a0aec0" : "#888" }}
           dy={10}
         />
         <YAxis 
           tickFormatter={(value) => formatCurrency(value, false)}
           tickLine={false}
           axisLine={false}
-          tick={{ fontSize: 11, fill: "#888" }}
+          tick={{ fontSize: 11, fill: isDarkMode ? "#a0aec0" : "#888" }}
           width={60}
         />
         <Tooltip 
           formatter={(value) => [formatCurrency(value as number), "Total Spent"]}
           contentStyle={{ 
             borderRadius: '12px',
-            backgroundColor: '#ffffff',
+            backgroundColor: isDarkMode ? '#1a202c' : '#ffffff',
             border: 'none',
-            boxShadow: '0 4px 20px rgba(0, 0, 0, 0.1)',
+            boxShadow: isDarkMode 
+              ? '0 4px 20px rgba(0, 0, 0, 0.5)' 
+              : '0 4px 20px rgba(0, 0, 0, 0.1)',
             padding: '10px 14px',
             fontSize: '13px',
-            color: '#333333'
+            color: isDarkMode ? '#e2e8f0' : '#333333'
           }}
           itemStyle={{
             color: '#0ea5e9',
@@ -82,14 +92,16 @@ export default function MonthlySpendingChart({ data }: MonthlySpendingChartProps
             fontWeight: 500,
             marginBottom: '4px'
           }}
-          cursor={{ fill: 'rgba(180, 180, 250, 0.1)' }}
+          cursor={{ fill: isDarkMode ? 'rgba(45, 55, 72, 0.4)' : 'rgba(180, 180, 250, 0.1)' }}
         />
         <Bar 
           dataKey="amount" 
           fill="#0ea5e9" 
           radius={[8, 8, 0, 0] as any}
           maxBarSize={45}
-          background={{ fill: '#f5f5f5' }}
+          background={{ 
+            fill: isDarkMode ? '#1e293b' : '#f5f5f5' 
+          }}
         />
       </BarChart>
     </ResponsiveContainer>
