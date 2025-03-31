@@ -47,35 +47,31 @@ export default function TabNavigation() {
     );
   }
   
-  // Desktop navigation - pure CSS
+  // Desktop navigation - more reliable approach with percentages
   return (
     <div className="mb-8 flex justify-center sm:justify-start">
-      <div className="glass-effect rounded-full p-1.5 flex items-center justify-between gap-1 shadow-sm relative">
-        {/* Background indicator - using CSS variables for positioning */}
+      <div className="glass-effect rounded-full p-1.5 flex items-center justify-between shadow-sm relative">
+        {/* Background indicator - using percentages for positioning */}
         <div 
-          className="absolute h-[calc(100%-12px)] top-1.5 bg-primary rounded-full -z-0 transition-all duration-300 ease-out"
+          className="absolute h-[calc(100%-12px)] top-1.5 bg-primary rounded-full transition-all duration-300 ease-out"
           style={{
-            left: activeIndex === 0 ? '8px' : 
-                  activeIndex === 1 ? '116px' : 
-                  activeIndex === 2 ? '220px' : 
-                  '338px',
-            width: activeIndex === 0 ? '108px' : 
-                   activeIndex === 1 ? '104px' : 
-                   activeIndex === 2 ? '118px' : 
-                   '110px',
+            left: `calc(${activeIndex * 25}% + 8px)`,
+            width: 'calc(25% - 16px)',
             opacity: 1,
+            zIndex: 0,
           }}
         />
         
-        {navItemsData.map((item) => (
+        {navItemsData.map((item, index) => (
           <Link key={item.path} href={item.path}>
             <div 
               className={`
-                flex items-center gap-2 px-4 py-2 rounded-full transition-colors duration-200 relative z-10
+                flex items-center gap-2 px-4 py-2 rounded-full transition-colors duration-200 w-full
                 ${isActive(item.path) 
                   ? "text-white dark:text-[#0f172a] font-medium" 
                   : "text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white"}
               `}
+              style={{ position: 'relative', zIndex: 1 }}
             >
               <item.Icon className="h-4 w-4" />
               <span className="text-sm">{item.label}</span>
