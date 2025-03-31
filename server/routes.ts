@@ -10,6 +10,7 @@ import { ZodError } from "zod";
 import { fromZodError } from "zod-validation-error";
 import { ImageAnnotatorClient } from "@google-cloud/vision";
 import { GoogleGenerativeAI, HarmCategory, HarmBlockThreshold } from "@google/generative-ai";
+import { seedDummyReceipts } from "./seed-data";
 
 // Add multer middleware types
 interface MulterRequest extends Request {
@@ -148,6 +149,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const receipts = await storage.getAllReceipts();
       res.json(receipts);
+    } catch (error) {
+      handleError(res, error);
+    }
+  });
+  
+  // Seed data endpoint
+  app.post("/api/seed", async (req, res) => {
+    try {
+      const count = await seedDummyReceipts();
+      res.status(201).json({ message: `Created ${count} dummy receipts successfully` });
     } catch (error) {
       handleError(res, error);
     }
@@ -1038,6 +1049,64 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }));
       
       res.json(result);
+    } catch (error) {
+      handleError(res, error);
+    }
+  });
+  
+  // Get monthly comparison data for the dashboard
+  app.get("/api/analytics/monthly-comparison", async (req, res) => {
+    try {
+      const receipts = await storage.getAllReceipts();
+      
+      // Get current month and last month
+      const now = new Date();
+      const currentMonth = now.getMonth();
+      const currentYear = now.getFullYear();
+      
+      // Calculate last month, handling year change
+      const lastMonth = currentMonth === 0 ? 11 : currentMonth - 1;
+      const lastMonthYear = currentMonth === 0 ? currentYear - 1 : currentYear;
+      
+      let currentMonthTotal = 0;
+      let lastMonthTotal = 0;
+      let currentMonthCount = 0;
+      let lastMonthCount = 0;
+      
+      receipts.forEach(receipt => {
+        const date = new Date(receipt.date);
+        const month = date.getMonth();
+        const year = date.getFullYear();
+        
+        if (month === currentMonth && year === currentYear) {
+          currentMonthTotal += Number(receipt.total);
+          currentMonthCount++;
+        } else if (month === lastMonth && year === lastMonthYear) {
+          lastMonthTotal += Number(receipt.total);
+          lastMonthCount++;
+        }
+      });
+      
+      // Calculate percentage changes
+      let percentageChangeTotal = 0;
+      let percentageChangeCount = 0;
+      
+      if (lastMonthTotal > 0) {
+        percentageChangeTotal = ((currentMonthTotal - lastMonthTotal) / lastMonthTotal) * 100;
+      }
+      
+      if (lastMonthCount > 0) {
+        percentageChangeCount = ((currentMonthCount - lastMonthCount) / lastMonthCount) * 100;
+      }
+      
+      res.json({
+        currentMonthTotal,
+        lastMonthTotal,
+        percentageChangeTotal: Math.round(percentageChangeTotal * 10) / 10, // Round to 1 decimal place
+        currentMonthCount,
+        lastMonthCount,
+        percentageChangeCount: Math.round(percentageChangeCount * 10) / 10
+      });
     } catch (error) {
       handleError(res, error);
     }

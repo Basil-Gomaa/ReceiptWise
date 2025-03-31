@@ -5,7 +5,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
-import { Calendar, Download, Search, SlidersHorizontal } from "lucide-react";
+import { Calendar, Download, Search, SlidersHorizontal, Database } from "lucide-react";
 import FileUploader from "@/components/FileUploader";
 import OcrProcessingUI from "@/components/OcrProcessingUI";
 import ReceiptCard from "@/components/ReceiptCard";
@@ -90,6 +90,7 @@ export default function Receipts() {
       queryClient.invalidateQueries({ queryKey: ["/api/receipts"] });
       queryClient.invalidateQueries({ queryKey: ["/api/analytics/monthly"] });
       queryClient.invalidateQueries({ queryKey: ["/api/analytics/categories"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/analytics/monthly-comparison"] });
       
       // If there was an OCR error or we had to use fallback method, show appropriate toast
       if (data.ocrError) {
@@ -178,6 +179,7 @@ export default function Receipts() {
       queryClient.invalidateQueries({ queryKey: ["/api/receipts"] });
       queryClient.invalidateQueries({ queryKey: ["/api/analytics/monthly"] });
       queryClient.invalidateQueries({ queryKey: ["/api/analytics/categories"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/analytics/monthly-comparison"] });
       toast({
         title: "Receipt deleted",
         description: "The receipt has been removed from your expenses.",
@@ -210,6 +212,39 @@ export default function Receipts() {
     return matchesSearch && matchesCategory;
   });
 
+  // Seed data mutation
+  const seedMutation = useMutation({
+    mutationFn: async () => {
+      const response = await apiRequest("POST", "/api/seed");
+      return response.json();
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/receipts"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/analytics/monthly"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/analytics/categories"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/analytics/monthly-comparison"] });
+      
+      toast({
+        title: "Test data generated",
+        description: data.message || "Dummy receipts were successfully created.",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Failed to generate test data",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+  
+  // Handle seed data generation
+  const handleSeedData = () => {
+    if (window.confirm("This will generate test receipts data. Continue?")) {
+      seedMutation.mutate();
+    }
+  };
+  
   // Export receipts as CSV
   const handleExportCsv = async () => {
     try {
@@ -318,6 +353,19 @@ export default function Receipts() {
                 ? "Try changing your search or filter criteria" 
                 : "Upload your first receipt to get started"}
             </p>
+            
+            {!searchQuery && selectedCategory === "all" && (
+              <div className="flex justify-center mt-2">
+                <Button 
+                  onClick={handleSeedData} 
+                  className="flex items-center space-x-2 bg-blue-600 hover:bg-blue-700"
+                  disabled={seedMutation.isPending}
+                >
+                  <Database className="h-5 w-5" />
+                  <span>{seedMutation.isPending ? 'Generating...' : 'Generate Test Data'}</span>
+                </Button>
+              </div>
+            )}
           </div>
         )}
         
@@ -345,10 +393,20 @@ export default function Receipts() {
                 </button>
               </div>
               
-              <Button onClick={handleExportCsv} className="flex items-center space-x-2">
-                <Download className="h-5 w-5" />
-                <span>Export CSV</span>
-              </Button>
+              <div className="flex items-center gap-2">
+                <Button 
+                  onClick={handleSeedData} 
+                  className="flex items-center space-x-2 bg-blue-600 hover:bg-blue-700"
+                  disabled={seedMutation.isPending}
+                >
+                  <Database className="h-5 w-5" />
+                  <span>{seedMutation.isPending ? 'Generating...' : 'Generate Test Data'}</span>
+                </Button>
+                <Button onClick={handleExportCsv} className="flex items-center space-x-2">
+                  <Download className="h-5 w-5" />
+                  <span>Export CSV</span>
+                </Button>
+              </div>
             </div>
           </div>
         )}

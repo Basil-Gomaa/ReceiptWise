@@ -9,6 +9,16 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
+// Define types for the comparison data
+interface MonthlyComparison {
+  currentMonthTotal: number;
+  lastMonthTotal: number;
+  percentageChangeTotal: number;
+  currentMonthCount: number;
+  lastMonthCount: number;
+  percentageChangeCount: number;
+}
+
 // Dashboard tab containing summary cards, charts, and recent activity
 export default function Dashboard() {
   const isMobile = useIsMobile();
@@ -23,6 +33,10 @@ export default function Dashboard() {
 
   const { data: categoryData, isLoading: categoryLoading } = useQuery({
     queryKey: ["/api/analytics/categories"],
+  });
+  
+  const { data: comparisonData, isLoading: comparisonLoading } = useQuery<MonthlyComparison>({
+    queryKey: ["/api/analytics/monthly-comparison"],
   });
 
   // Calculate total expenses
@@ -49,15 +63,24 @@ export default function Dashboard() {
             </div>
             
             <div className="flex items-baseline gap-2">
-              {receiptsLoading ? (
+              {receiptsLoading || comparisonLoading ? (
                 <Skeleton className="h-9 w-32 bg-white/20" />
               ) : (
                 <h2 className="text-2xl sm:text-3xl font-bold">{formatCurrency(totalExpenses)}</h2>
               )}
-              <Badge variant="outline" className="bg-green-500/20 text-green-100 border-green-500/30 text-xs gap-0.5 font-normal">
-                <TrendingUp className="h-3 w-3" />
-                4.5%
-              </Badge>
+              {comparisonData && !comparisonLoading && (comparisonData as MonthlyComparison).percentageChangeTotal !== 0 && (
+                <Badge 
+                  variant="outline" 
+                  className={`${(comparisonData as MonthlyComparison).percentageChangeTotal > 0 
+                    ? 'bg-green-500/20 text-green-100 border-green-500/30' 
+                    : 'bg-red-500/20 text-red-100 border-red-500/30'} text-xs gap-0.5 font-normal`}
+                >
+                  {(comparisonData as MonthlyComparison).percentageChangeTotal > 0 
+                    ? <TrendingUp className="h-3 w-3" /> 
+                    : <TrendingUp className="h-3 w-3 rotate-180" />}
+                  {Math.abs((comparisonData as MonthlyComparison).percentageChangeTotal)}%
+                </Badge>
+              )}
             </div>
             
             <p className="text-white/60 text-xs">vs last month</p>
@@ -75,15 +98,24 @@ export default function Dashboard() {
             </div>
             
             <div className="flex items-baseline gap-2">
-              {receiptsLoading ? (
+              {receiptsLoading || comparisonLoading ? (
                 <Skeleton className="h-9 w-16 bg-white/20" />
               ) : (
                 <h2 className="text-2xl sm:text-3xl font-bold">{Array.isArray(receipts) ? receipts.length : 0}</h2>
               )}
-              <Badge variant="outline" className="bg-green-500/20 text-green-100 border-green-500/30 text-xs gap-0.5 font-normal">
-                <TrendingUp className="h-3 w-3" />
-                12.8%
-              </Badge>
+              {comparisonData && !comparisonLoading && (comparisonData as MonthlyComparison).percentageChangeCount !== 0 && (
+                <Badge 
+                  variant="outline" 
+                  className={`${(comparisonData as MonthlyComparison).percentageChangeCount > 0 
+                    ? 'bg-green-500/20 text-green-100 border-green-500/30' 
+                    : 'bg-red-500/20 text-red-100 border-red-500/30'} text-xs gap-0.5 font-normal`}
+                >
+                  {(comparisonData as MonthlyComparison).percentageChangeCount > 0 
+                    ? <TrendingUp className="h-3 w-3" /> 
+                    : <TrendingUp className="h-3 w-3 rotate-180" />}
+                  {Math.abs((comparisonData as MonthlyComparison).percentageChangeCount)}%
+                </Badge>
+              )}
             </div>
             
             <p className="text-white/60 text-xs">vs last month</p>

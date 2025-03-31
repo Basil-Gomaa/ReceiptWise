@@ -151,7 +151,7 @@ export async function seedDummyReceipts() {
       
       const receipt: InsertReceipt = {
         merchantName,
-        total,
+        total: total.toString(), // Convert to string as expected by the schema
         date,
         categoryId: categoryIdNum,
         ocrText: `Receipt from ${merchantName}. Total: $${total.toFixed(2)}. Date: ${date.toLocaleString()}`
