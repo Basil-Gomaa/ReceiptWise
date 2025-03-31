@@ -28,13 +28,20 @@ export default function CategoryDistributionChart({ data }: CategoryDistribution
   const chartData = data.map(category => ({
     name: category.name,
     value: category.total,
-    color: category.color,
-    // Add a shadow color for hover effects
-    shadowColor: `${category.color}80`
+    color: category.color
   }));
 
   // Calculate total to use for percentages
   const totalSpending = chartData.reduce((sum, category) => sum + category.value, 0);
+
+  // Calculate percentage for each category
+  const chartDataWithPercentage = chartData.map(item => ({
+    ...item,
+    percentage: totalSpending > 0 ? Math.round((item.value / totalSpending) * 100) : 0
+  }));
+
+  // Sort from highest to lowest total
+  chartDataWithPercentage.sort((a, b) => b.value - a.value);
 
   const RADIAN = Math.PI / 180;
   const renderCustomizedLabel = ({ 
@@ -101,119 +108,51 @@ export default function CategoryDistributionChart({ data }: CategoryDistribution
     return null;
   };
 
-  // Custom legend that responds to hover
+  // Custom legend that matches the design
   const CustomLegend = () => (
-    <div className="flex flex-col gap-2 pr-2">
-      {chartData.map((entry, index) => (
-        <motion.div
+    <div className="flex flex-col gap-2">
+      {chartDataWithPercentage.map((entry, index) => (
+        <div
           key={`legend-${index}`}
-          className="flex items-center gap-2 cursor-pointer p-1.5 rounded-lg"
-          whileHover={{ 
-            backgroundColor: isDarkMode ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)',
-            scale: 1.02,
-            transition: { duration: 0.2 } 
-          }}
+          className="flex items-center gap-3 cursor-pointer p-1"
           onMouseEnter={() => setActiveIndex(index)}
           onMouseLeave={() => setActiveIndex(null)}
         >
           <div 
-            className="w-3.5 h-3.5 rounded-full" 
+            className="w-3 h-3 rounded-full" 
             style={{ backgroundColor: entry.color }}
           />
           <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
             {entry.name}
           </span>
-          <span className="text-xs text-gray-500 dark:text-gray-400 ml-auto">
-            {formatCurrency(entry.value, false)}
+          <span className="text-sm font-bold text-gray-700 dark:text-gray-300 ml-auto">
+            {formatCurrency(entry.value)}
           </span>
-        </motion.div>
+        </div>
       ))}
     </div>
   );
 
-  // Calculate total value for pie chart
-  const totalValue = chartData.reduce((acc, entry) => acc + entry.value, 0);
-
   return (
     <ResponsiveContainer width="100%" height="100%">
       <PieChart>
-        <defs>
-          {chartData.map((entry, index) => (
-            <filter key={`shadow-${index}`} id={`shadow-${index}`} x="-20%" y="-20%" width="140%" height="140%">
-              <feDropShadow dx="0" dy="0" stdDeviation="5" floodColor={entry.color} floodOpacity="0.5" />
-            </filter>
-          ))}
-        </defs>
         <Pie
-          data={chartData}
-          cx="40%"
+          data={chartDataWithPercentage}
+          cx="35%"
           cy="50%"
           labelLine={false}
           label={renderCustomizedLabel}
-          outerRadius={110}
-          innerRadius={55}
-          paddingAngle={4}
+          outerRadius={85}
+          innerRadius={50}
+          paddingAngle={2}
           dataKey="value"
-          stroke={isDarkMode ? "#1a202c" : "#ffffff"}
-          strokeWidth={2}
+          stroke="transparent"
           activeIndex={activeIndex as number | undefined}
-          cornerRadius={15}
-          activeShape={(props: any) => {
-            const RADIAN = Math.PI / 180;
-            const { cx, cy, midAngle, innerRadius, outerRadius, startAngle, endAngle, fill, payload, percent, value } = props;
-            
-            // Define the corners for rounding
-            const cornerRadius = 12;
-            
-            // Calculate points for the outer arc
-            const outerStartX = cx + outerRadius * Math.cos(-startAngle * RADIAN);
-            const outerStartY = cy + outerRadius * Math.sin(-startAngle * RADIAN);
-            const outerEndX = cx + outerRadius * Math.cos(-endAngle * RADIAN);
-            const outerEndY = cy + outerRadius * Math.sin(-endAngle * RADIAN);
-            
-            // Calculate points for the inner arc
-            const innerStartX = cx + innerRadius * Math.cos(-startAngle * RADIAN);
-            const innerStartY = cy + innerRadius * Math.sin(-startAngle * RADIAN);
-            const innerEndX = cx + innerRadius * Math.cos(-endAngle * RADIAN);
-            const innerEndY = cy + innerRadius * Math.sin(-endAngle * RADIAN);
-            
-            return (
-              <g filter={`url(#shadow-${activeIndex})`}>
-                {/* Outer segment with rounded corners */}
-                <path 
-                  d={`
-                    M ${cx + (innerRadius + 5) * Math.cos(-startAngle * RADIAN)},${cy + (innerRadius + 5) * Math.sin(-startAngle * RADIAN)} 
-                    L ${outerStartX},${outerStartY} 
-                    A ${outerRadius},${outerRadius} 0 ${endAngle - startAngle > 180 ? 1 : 0},0 ${outerEndX},${outerEndY} 
-                    L ${cx + (innerRadius + 5) * Math.cos(-endAngle * RADIAN)},${cy + (innerRadius + 5) * Math.sin(-endAngle * RADIAN)}
-                    A ${innerRadius + 5},${innerRadius + 5} 0 ${endAngle - startAngle > 180 ? 1 : 0},1 ${cx + (innerRadius + 5) * Math.cos(-startAngle * RADIAN)},${cy + (innerRadius + 5) * Math.sin(-startAngle * RADIAN)}
-                  `} 
-                  fill={fill} 
-                  stroke={isDarkMode ? "#1a202c" : "#ffffff"}
-                  strokeWidth={2}
-                  strokeLinejoin="round"
-                  strokeLinecap="round"
-                />
-                
-                {/* Inner hole */}
-                <circle 
-                  cx={cx} 
-                  cy={cy} 
-                  r={innerRadius} 
-                  fill={isDarkMode ? "#1a202c" : "#ffffff"} 
-                />
-              </g>
-            );
-          }}
         >
-          {chartData.map((entry, index) => (
+          {chartDataWithPercentage.map((entry, index) => (
             <Cell 
               key={`cell-${index}`} 
-              fill={entry.color} 
-              style={{
-                filter: `drop-shadow(0px 0px 2px ${entry.color}40)`,
-              }}
-              className="transition-all duration-300"
+              fill={entry.color}
             />
           ))}
         </Pie>
@@ -223,7 +162,7 @@ export default function CategoryDistributionChart({ data }: CategoryDistribution
           layout="vertical"
           verticalAlign="middle"
           align="right"
-          wrapperStyle={{ right: 0 }}
+          wrapperStyle={{ right: 0, width: '65%', top: '50%', transform: 'translateY(-50%)' }}
         />
       </PieChart>
     </ResponsiveContainer>
