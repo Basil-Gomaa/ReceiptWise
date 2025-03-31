@@ -283,19 +283,23 @@ export default function Challenges() {
   
   const updateProgressMutation = useMutation({
     mutationFn: async ({ id, amount }: { id: number, amount: number }) => {
-      return apiRequest(`/api/savings-challenges/${id}/progress`, 'POST', { amount });
+      // Fix: Correct order of parameters (method, url, data)
+      return apiRequest('POST', `/api/savings-challenges/${id}/progress`, { amount: Number(amount) });
     },
     onSuccess: () => {
+      // Invalidate both regular and active challenges queries
       queryClient.invalidateQueries({ queryKey: ['/api/savings-challenges'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/savings-challenges/active'] });
       toast({
         title: "Progress updated",
         description: "Your savings challenge progress has been updated.",
       });
     },
     onError: (error: Error) => {
+      console.error("Progress update error:", error);
       toast({
         title: "Failed to update progress",
-        description: error.message,
+        description: error.message || "There was a problem updating your progress",
         variant: "destructive",
       });
     },
