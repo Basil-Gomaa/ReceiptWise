@@ -131,6 +131,9 @@ export default function CategoryDistributionChart({ data }: CategoryDistribution
     </div>
   );
 
+  // Calculate total value for pie chart
+  const totalValue = chartData.reduce((acc, entry) => acc + entry.value, 0);
+
   return (
     <ResponsiveContainer width="100%" height="100%">
       <PieChart>
@@ -149,25 +152,54 @@ export default function CategoryDistributionChart({ data }: CategoryDistribution
           label={renderCustomizedLabel}
           outerRadius={110}
           innerRadius={55}
-          paddingAngle={3}
+          paddingAngle={4}
           dataKey="value"
           stroke={isDarkMode ? "#1a202c" : "#ffffff"}
           strokeWidth={2}
-          activeIndex={activeIndex}
-          activeShape={(props) => {
+          activeIndex={activeIndex as number | undefined}
+          cornerRadius={15}
+          activeShape={(props: any) => {
             const RADIAN = Math.PI / 180;
             const { cx, cy, midAngle, innerRadius, outerRadius, startAngle, endAngle, fill, payload, percent, value } = props;
             
+            // Define the corners for rounding
+            const cornerRadius = 12;
+            
+            // Calculate points for the outer arc
+            const outerStartX = cx + outerRadius * Math.cos(-startAngle * RADIAN);
+            const outerStartY = cy + outerRadius * Math.sin(-startAngle * RADIAN);
+            const outerEndX = cx + outerRadius * Math.cos(-endAngle * RADIAN);
+            const outerEndY = cy + outerRadius * Math.sin(-endAngle * RADIAN);
+            
+            // Calculate points for the inner arc
+            const innerStartX = cx + innerRadius * Math.cos(-startAngle * RADIAN);
+            const innerStartY = cy + innerRadius * Math.sin(-startAngle * RADIAN);
+            const innerEndX = cx + innerRadius * Math.cos(-endAngle * RADIAN);
+            const innerEndY = cy + innerRadius * Math.sin(-endAngle * RADIAN);
+            
             return (
               <g filter={`url(#shadow-${activeIndex})`}>
+                {/* Outer segment with rounded corners */}
                 <path 
-                  d={`M ${cx},${cy} L ${cx + outerRadius * Math.cos(-startAngle * RADIAN)},${cy + outerRadius * Math.sin(-startAngle * RADIAN)} A ${outerRadius},${outerRadius} 0 ${endAngle - startAngle > 180 ? 1 : 0},0 ${cx + outerRadius * Math.cos(-endAngle * RADIAN)},${cy + outerRadius * Math.sin(-endAngle * RADIAN)} L ${cx},${cy}`} 
+                  d={`
+                    M ${cx + (innerRadius + 5) * Math.cos(-startAngle * RADIAN)},${cy + (innerRadius + 5) * Math.sin(-startAngle * RADIAN)} 
+                    L ${outerStartX},${outerStartY} 
+                    A ${outerRadius},${outerRadius} 0 ${endAngle - startAngle > 180 ? 1 : 0},0 ${outerEndX},${outerEndY} 
+                    L ${cx + (innerRadius + 5) * Math.cos(-endAngle * RADIAN)},${cy + (innerRadius + 5) * Math.sin(-endAngle * RADIAN)}
+                    A ${innerRadius + 5},${innerRadius + 5} 0 ${endAngle - startAngle > 180 ? 1 : 0},1 ${cx + (innerRadius + 5) * Math.cos(-startAngle * RADIAN)},${cy + (innerRadius + 5) * Math.sin(-startAngle * RADIAN)}
+                  `} 
                   fill={fill} 
                   stroke={isDarkMode ? "#1a202c" : "#ffffff"}
                   strokeWidth={2}
+                  strokeLinejoin="round"
+                  strokeLinecap="round"
                 />
-                <path 
-                  d={`M ${cx},${cy} L ${cx + innerRadius * Math.cos(-startAngle * RADIAN)},${cy + innerRadius * Math.sin(-startAngle * RADIAN)} A ${innerRadius},${innerRadius} 0 ${endAngle - startAngle > 180 ? 1 : 0},0 ${cx + innerRadius * Math.cos(-endAngle * RADIAN)},${cy + innerRadius * Math.sin(-endAngle * RADIAN)} L ${cx},${cy}`} 
+                
+                {/* Inner hole */}
+                <circle 
+                  cx={cx} 
+                  cy={cy} 
+                  r={innerRadius} 
                   fill={isDarkMode ? "#1a202c" : "#ffffff"} 
                 />
               </g>
@@ -178,6 +210,9 @@ export default function CategoryDistributionChart({ data }: CategoryDistribution
             <Cell 
               key={`cell-${index}`} 
               fill={entry.color} 
+              style={{
+                filter: `drop-shadow(0px 0px 2px ${entry.color}40)`,
+              }}
               className="transition-all duration-300"
             />
           ))}
