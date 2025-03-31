@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter }
 import { Skeleton } from "@/components/ui/skeleton";
 import MonthlySpendingChart from "@/components/charts/MonthlySpendingChart";
 import CategoryDistributionChart from "@/components/charts/CategoryDistributionChart";
+import FinancialMoodIndicator from "@/components/FinancialMoodIndicator";
 import { formatCurrency } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Badge } from "@/components/ui/badge";
