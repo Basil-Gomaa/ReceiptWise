@@ -1,8 +1,6 @@
 import { useState, useEffect } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Sparkles, TrendingDown, TrendingUp, AlertCircle, HelpCircle, Laugh, Smile, Meh, Frown, Wind } from 'lucide-react';
-import { formatCurrency } from '@/lib/utils';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Sparkles } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 interface FinancialMoodIndicatorProps {
@@ -20,14 +18,12 @@ export default function FinancialMoodIndicator({
   recentExpenses = [],
   isLoading = false
 }: FinancialMoodIndicatorProps) {
-  const [mood, setMood] = useState<'excellent' | 'good' | 'neutral' | 'concerned' | 'unknown'>('unknown');
-  const [moodReason, setMoodReason] = useState<string>('');
+  const [mood, setMood] = useState<'happy' | 'neutral' | 'sad' | 'unknown'>('unknown');
   
   // Calculate financial mood based on spending patterns and budget
   useEffect(() => {
     if (isLoading || recentExpenses.length === 0) {
       setMood('unknown');
-      setMoodReason('No financial data available yet.');
       return;
     }
 
@@ -48,189 +44,118 @@ export default function FinancialMoodIndicator({
     // Determine mood based on financial patterns
     if (monthlyBudget > 0) {
       // If budget is set, use that for comparison
-      if (projectedMonthly < monthlyBudget * 0.7) {
-        setMood('excellent');
-        setMoodReason('You\'re well under your monthly budget - great job!');
-      } else if (projectedMonthly < monthlyBudget * 0.9) {
-        setMood('good');
-        setMoodReason('You\'re keeping your spending under budget.');
+      if (projectedMonthly < monthlyBudget * 0.8) {
+        setMood('happy');
       } else if (projectedMonthly < monthlyBudget * 1.1) {
         setMood('neutral');
-        setMoodReason('You\'re close to your monthly budget.');
       } else {
-        setMood('concerned');
-        setMoodReason('You\'re trending to exceed your monthly budget.');
+        setMood('sad');
       }
     } else {
       // If no budget, compare to previous month
       if (previousMonthSpending === 0) {
         // No previous data to compare
-        if (recentTotal > 0) {
-          setMood('neutral');
-          setMoodReason('Tracking your first month of expenses.');
-        } else {
-          setMood('unknown');
-          setMoodReason('No financial data available yet.');
-        }
+        setMood('neutral');
       } else {
         // Compare to previous month
         const changePercent = ((projectedMonthly - previousMonthSpending) / previousMonthSpending) * 100;
         
-        if (changePercent < -15) {
-          setMood('excellent');
-          setMoodReason('You\'ve significantly reduced your spending from last month!');
-        } else if (changePercent < -5) {
-          setMood('good');
-          setMoodReason('You\'re spending less than last month.');
-        } else if (changePercent < 10) {
+        if (changePercent < -10) {
+          setMood('happy');
+        } else if (changePercent < 15) {
           setMood('neutral');
-          setMoodReason('Your spending is similar to last month.');
         } else {
-          setMood('concerned');
-          setMoodReason('Your spending is higher than last month.');
+          setMood('sad');
         }
       }
     }
   }, [monthlySpending, previousMonthSpending, monthlyBudget, recentExpenses, isLoading]);
 
-  // Render the appropriate emoji based on mood
-  const renderMoodEmoji = () => {
+  // Get emoji and color based on mood
+  const getMoodEmoji = () => {
     switch (mood) {
-      case 'excellent':
-        return (
-          <motion.div 
-            initial={{ scale: 0.8 }}
-            animate={{ scale: 1, rotate: [0, 10, 0] }}
-            transition={{ repeat: Infinity, repeatType: "reverse", duration: 3 }}
-            className="text-6xl bg-green-100 dark:bg-green-900/30 w-20 h-20 rounded-full flex items-center justify-center"
-          >
-            <span className="text-5xl" role="img" aria-label="Grinning Face with Big Eyes">😄</span>
-          </motion.div>
-        );
-      case 'good':
-        return (
-          <motion.div 
-            initial={{ y: 0 }}
-            animate={{ y: [0, -5, 0] }}
-            transition={{ repeat: Infinity, repeatType: "reverse", duration: 2 }}
-            className="text-6xl bg-blue-100 dark:bg-blue-900/30 w-20 h-20 rounded-full flex items-center justify-center"
-          >
-            <span className="text-5xl" role="img" aria-label="Slightly Smiling Face">🙂</span>
-          </motion.div>
-        );
+      case 'happy':
+        return '😄';
       case 'neutral':
-        return (
-          <div className="text-6xl bg-gray-100 dark:bg-gray-800 w-20 h-20 rounded-full flex items-center justify-center">
-            <span className="text-5xl" role="img" aria-label="Neutral Face">😐</span>
-          </div>
-        );
-      case 'concerned':
-        return (
-          <motion.div 
-            animate={{ rotate: [-2, 2, -2] }}
-            transition={{ repeat: Infinity, duration: 1.5 }}
-            className="text-6xl bg-red-100 dark:bg-red-900/30 w-20 h-20 rounded-full flex items-center justify-center"
-          >
-            <span className="text-5xl" role="img" aria-label="Worried Face">😟</span>
-          </motion.div>
-        );
+        return '😐';
+      case 'sad':
+        return '😟';
       case 'unknown':
       default:
-        return (
-          <motion.div
-            animate={{ rotate: [0, 360] }}
-            transition={{ repeat: Infinity, duration: 20, ease: "linear" }}
-            className="text-6xl bg-purple-100 dark:bg-purple-900/30 w-20 h-20 rounded-full flex items-center justify-center"
-          >
-            <span className="text-5xl" role="img" aria-label="Thinking Face">🤔</span>
-          </motion.div>
-        );
+        return '🤔';
     }
   };
 
-  // Get trend indicator
-  const getTrendIndicator = () => {
-    if (isLoading || previousMonthSpending === 0) return null;
-    
-    const isIncreasing = monthlySpending > previousMonthSpending;
-    const changeAmount = Math.abs(monthlySpending - previousMonthSpending);
-    const changePercent = previousMonthSpending > 0 
-      ? Math.round((changeAmount / previousMonthSpending) * 100) 
-      : 0;
-    
-    return (
-      <div className={`flex items-center gap-1 text-sm ${isIncreasing ? 'text-red-500' : 'text-green-500'}`}>
-        {isIncreasing ? (
-          <TrendingUp className="h-4 w-4" />
-        ) : (
-          <TrendingDown className="h-4 w-4" />
-        )}
-        <span>{changePercent}% {isIncreasing ? 'more' : 'less'} than last month</span>
-      </div>
-    );
+  const getMoodColor = () => {
+    switch (mood) {
+      case 'happy':
+        return 'text-green-500 dark:text-green-400';
+      case 'neutral':
+        return 'text-yellow-500 dark:text-yellow-400';
+      case 'sad':
+        return 'text-red-500 dark:text-red-400';
+      case 'unknown':
+      default:
+        return 'text-purple-500 dark:text-purple-400';
+    }
   };
+
+  const getMoodAnimation = () => {
+    switch (mood) {
+      case 'happy':
+        return {
+          animate: { rotate: [0, 5, 0, -5, 0] },
+          transition: { repeat: Infinity, duration: 2.5 }
+        };
+      case 'neutral':
+        return {};
+      case 'sad':
+        return {
+          animate: { y: [0, 3, 0] },
+          transition: { repeat: Infinity, duration: 2 }
+        };
+      case 'unknown':
+      default:
+        return {
+          animate: { rotate: [0, 360] },
+          transition: { repeat: Infinity, duration: 20, ease: "linear" }
+        };
+    }
+  };
+
+  const animation = getMoodAnimation();
 
   return (
     <Card className="shadow-md bg-white dark:bg-[#0f172a]/80 border-0 overflow-hidden">
-      <CardHeader className="pb-2">
-        <div className="flex justify-between items-center">
-          <div>
-            <CardTitle className="text-lg font-medium">Financial Mood</CardTitle>
-            <CardDescription>How your spending looks right now</CardDescription>
-          </div>
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <button className="text-gray-400 hover:text-gray-500 dark:text-gray-500 dark:hover:text-gray-400">
-                  <HelpCircle className="h-4 w-4" />
-                </button>
-              </TooltipTrigger>
-              <TooltipContent className="max-w-xs">
-                <p>This shows your financial mood based on your recent spending patterns, comparing to your previous month or budget (if set).</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-        </div>
+      <CardHeader className="pb-0">
+        <CardTitle className="text-lg font-medium text-center">Financial Mood</CardTitle>
       </CardHeader>
       
-      <CardContent className="flex justify-between items-center py-4">
-        <div className="max-w-[60%]">
-          <div className="mb-2">
-            <h3 className={`text-xl font-bold ${
-              mood === 'excellent' ? 'text-green-500 dark:text-green-400' :
-              mood === 'good' ? 'text-blue-500 dark:text-blue-400' :
-              mood === 'neutral' ? 'text-yellow-500 dark:text-yellow-400' :
-              mood === 'concerned' ? 'text-red-500 dark:text-red-400' :
-              'text-purple-500 dark:text-purple-400'
-            }`}>
-              {mood === 'excellent' ? 'Excellent!' :
-               mood === 'good' ? 'Looking Good' :
-               mood === 'neutral' ? 'Steady' :
-               mood === 'concerned' ? 'Watch Out' :
-               'Getting Started'}
-            </h3>
-            <p className="text-sm text-gray-500 dark:text-gray-400">{moodReason}</p>
-          </div>
-          
-          {!isLoading && <div className="text-lg font-semibold">{formatCurrency(monthlySpending)} <span className="text-sm font-normal text-gray-500">this month</span></div>}
-          {getTrendIndicator()}
+      <CardContent className="flex flex-col items-center justify-center py-6">
+        <motion.div 
+          {...animation}
+          className="mb-4"
+        >
+          <span className="text-8xl" role="img" aria-label="Mood Emoji">
+            {getMoodEmoji()}
+          </span>
+        </motion.div>
+        
+        <div className={`text-xl font-bold ${getMoodColor()} mb-1`}>
+          {mood === 'happy' ? 'Happy' : 
+           mood === 'neutral' ? 'Neutral' : 
+           mood === 'sad' ? 'Sad' : 'Unknown'}
         </div>
         
-        <div className="flex flex-col items-center justify-center">
-          {renderMoodEmoji()}
-          
-          {mood !== 'unknown' && (
-            <motion.div 
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.3 }}
-              className="mt-2 flex items-center gap-1 text-xs font-medium text-purple-500 dark:text-purple-400"
-            >
-              <Sparkles className="h-3 w-3" />
-              <span>AI Powered</span>
-            </motion.div>
-          )}
-        </div>
+        <motion.div 
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.3 }}
+          className="mt-2 flex items-center gap-1 text-xs font-medium text-purple-500 dark:text-purple-400"
+        >
+          <Sparkles className="h-3 w-3" />
+          <span>AI Powered</span>
+        </motion.div>
       </CardContent>
     </Card>
   );
