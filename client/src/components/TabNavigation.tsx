@@ -67,7 +67,7 @@ export default function TabNavigation() {
             <Link key={item.path} href={item.path} className="w-[145px] text-center">
               <div 
                 className={`
-                  flex items-center justify-center ${item.label === "Home" ? "gap-1" : "gap-2"} py-3 rounded-full transition-colors duration-200
+                  flex items-center justify-center ${item.label === "Home" ? "gap-4" : "gap-2"} py-3 rounded-full transition-colors duration-200
                   ${isActive(item.path) 
                     ? "text-white dark:text-[#0f172a] font-medium" 
                     : "text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white"}
