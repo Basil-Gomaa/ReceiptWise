@@ -71,13 +71,13 @@ export default function ReceiptCard({ receipt, category, onDelete, onEdit }: Rec
             <div>
               {category ? (
                 <Badge 
-                  className="font-medium text-xs" 
+                  className="font-medium text-[10px] sm:text-xs whitespace-nowrap" 
                   style={{ backgroundColor: category.color, color: 'white' }}
                 >
                   {category.name}
                 </Badge>
               ) : (
-                <Badge variant="outline" className="text-xs">
+                <Badge variant="outline" className="text-[10px] sm:text-xs whitespace-nowrap">
                   Uncategorized
                 </Badge>
               )}
@@ -104,7 +104,7 @@ export default function ReceiptCard({ receipt, category, onDelete, onEdit }: Rec
                   <Badge 
                     key={index} 
                     variant="secondary" 
-                    className="text-xs font-normal bg-primary/5 text-primary-foreground/90"
+                    className="text-[10px] sm:text-xs font-normal bg-primary/5 text-primary-foreground/90 whitespace-nowrap"
                   >
                     {product}
                   </Badge>

@@ -77,7 +77,6 @@ export default function AddReceiptModal({ categories }: AddReceiptModalProps) {
       queryClient.invalidateQueries({ queryKey: ["/api/receipts"] });
       queryClient.invalidateQueries({ queryKey: ["/api/analytics/monthly"] });
       queryClient.invalidateQueries({ queryKey: ["/api/analytics/categories"] });
-      setOpen(false);
       toast({
         title: "Receipt Uploaded",
         description: "Your receipt has been successfully processed.",
@@ -94,6 +93,9 @@ export default function AddReceiptModal({ categories }: AddReceiptModalProps) {
 
   const handleFileSelect = async (files: FileList | null) => {
     if (!files || files.length === 0) return;
+
+    // Close the modal immediately after user selects an image
+    setOpen(false);
 
     setIsUploading(true);
     setOcrError(undefined);
