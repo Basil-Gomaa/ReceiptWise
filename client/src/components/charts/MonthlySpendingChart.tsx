@@ -75,7 +75,7 @@ export default function MonthlySpendingChart({ data }: MonthlySpendingChartProps
             color: '#333333'
           }}
           itemStyle={{
-            color: 'hsl(265, 85%, 50%)',
+            color: '#0ea5e9',
             fontWeight: 600
           }}
           labelStyle={{
@@ -86,7 +86,7 @@ export default function MonthlySpendingChart({ data }: MonthlySpendingChartProps
         />
         <Bar 
           dataKey="amount" 
-          fill="hsl(265, 85%, 50%)" 
+          fill="#0ea5e9" 
           radius={[8, 8, 0, 0] as any}
           maxBarSize={45}
           background={{ fill: '#f5f5f5' }}

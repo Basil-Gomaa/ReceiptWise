@@ -5,6 +5,7 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 
 import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 import {
   Dialog,
   DialogContent,
@@ -17,6 +18,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import FileUploader from "./FileUploader";
 import ReceiptForm from "./ReceiptForm";
+import OcrProcessingUI from "./OcrProcessingUI";
 
 interface AddReceiptModalProps {
   categories: Array<{
@@ -29,6 +31,8 @@ interface AddReceiptModalProps {
 export default function AddReceiptModal({ categories }: AddReceiptModalProps) {
   const [open, setOpen] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
+  const [ocrProgress, setOcrProgress] = useState(0);
+  const [ocrError, setOcrError] = useState<string | undefined>(undefined);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -47,6 +51,8 @@ export default function AddReceiptModal({ categories }: AddReceiptModalProps) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/receipts"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/analytics/monthly"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/analytics/categories"] });
       setOpen(false);
       toast({
         title: "Receipt Added",
@@ -69,6 +75,8 @@ export default function AddReceiptModal({ categories }: AddReceiptModalProps) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/receipts"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/analytics/monthly"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/analytics/categories"] });
       setOpen(false);
       toast({
         title: "Receipt Uploaded",
@@ -84,16 +92,46 @@ export default function AddReceiptModal({ categories }: AddReceiptModalProps) {
     },
   });
 
-  const handleFileSelect = (files: FileList | null) => {
+  const handleFileSelect = async (files: FileList | null) => {
     if (!files || files.length === 0) return;
 
     setIsUploading(true);
+    setOcrError(undefined);
+    setOcrProgress(0);
+    
+    // Simulate progress
+    const progressInterval = setInterval(() => {
+      setOcrProgress(prev => {
+        if (prev >= 90) {
+          clearInterval(progressInterval);
+          return 90;
+        }
+        return prev + 10;
+      });
+    }, 500);
+    
     const formData = new FormData();
     formData.append("receipt", files[0]);
     
-    uploadMutation.mutate(formData, {
-      onSettled: () => setIsUploading(false),
-    });
+    try {
+      const response = await uploadMutation.mutateAsync(formData);
+      // If the response includes an OCR error
+      const data = await response.json();
+      if (data && data.ocrError) {
+        setOcrError(data.ocrError);
+      }
+    } catch (error: any) {
+      setOcrError(error.message);
+    } finally {
+      clearInterval(progressInterval);
+      setOcrProgress(100);
+      
+      // Reset progress after a delay
+      setTimeout(() => {
+        setOcrProgress(0);
+        setIsUploading(false);
+      }, 1500);
+    }
   };
 
   const handleManualSubmit = (formData: any) => {
@@ -101,60 +139,75 @@ export default function AddReceiptModal({ categories }: AddReceiptModalProps) {
   };
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button className="flex items-center gap-2 font-medium">
-          <PlusCircle className="w-4 h-4" />
-          Add Receipt
-        </Button>
-      </DialogTrigger>
-      <DialogContent className="sm:max-w-[600px]">
-        <DialogHeader>
-          <DialogTitle>Add New Receipt</DialogTitle>
-          <DialogDescription>
-            Upload an image of your receipt or enter details manually
-          </DialogDescription>
-        </DialogHeader>
-        
-        <Tabs defaultValue="upload" className="w-full">
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="upload" className="flex items-center gap-2">
-              <Upload className="w-4 h-4" />
-              Upload Receipt
-            </TabsTrigger>
-            <TabsTrigger value="manual" className="flex items-center gap-2">
-              <Receipt className="w-4 h-4" />
-              Manual Entry
-            </TabsTrigger>
-          </TabsList>
-          
-          <TabsContent value="upload" className="mt-6">
-            <FileUploader 
-              onFileSelect={handleFileSelect} 
-              isUploading={isUploading || uploadMutation.isPending} 
-            />
-          </TabsContent>
-          
-          <TabsContent value="manual" className="mt-6">
-            <ReceiptForm 
-              onSubmit={handleManualSubmit} 
-              categories={categories}
-              isLoading={createManualMutation.isPending}
-            />
-          </TabsContent>
-        </Tabs>
-        
-        <DialogClose asChild>
-          <Button 
-            type="button" 
-            variant="outline" 
-            className="absolute top-2 right-2 h-8 w-8 p-0 rounded-full"
-          >
-            <X className="h-4 w-4" />
-            <span className="sr-only">Close</span>
+    <>
+      {isUploading && ocrProgress > 0 && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <Card className="w-full max-w-md">
+            <CardContent className="p-6">
+              <OcrProcessingUI 
+                progress={ocrProgress} 
+                errorMessage={ocrError} 
+              />
+            </CardContent>
+          </Card>
+        </div>
+      )}
+      
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogTrigger asChild>
+          <Button className="flex items-center gap-2 font-medium">
+            <PlusCircle className="w-4 h-4" />
+            Add Receipt
           </Button>
-        </DialogClose>
-      </DialogContent>
-    </Dialog>
+        </DialogTrigger>
+        <DialogContent className="sm:max-w-[600px]">
+          <DialogHeader>
+            <DialogTitle>Add New Receipt</DialogTitle>
+            <DialogDescription>
+              Upload an image of your receipt or enter details manually
+            </DialogDescription>
+          </DialogHeader>
+          
+          <Tabs defaultValue="upload" className="w-full">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="upload" className="flex items-center gap-2">
+                <Upload className="w-4 h-4" />
+                Upload Receipt
+              </TabsTrigger>
+              <TabsTrigger value="manual" className="flex items-center gap-2">
+                <Receipt className="w-4 h-4" />
+                Manual Entry
+              </TabsTrigger>
+            </TabsList>
+            
+            <TabsContent value="upload" className="mt-6">
+              <FileUploader 
+                onFileSelect={handleFileSelect} 
+                isUploading={isUploading || uploadMutation.isPending} 
+              />
+            </TabsContent>
+            
+            <TabsContent value="manual" className="mt-6">
+              <ReceiptForm 
+                onSubmit={handleManualSubmit} 
+                categories={categories}
+                isLoading={createManualMutation.isPending}
+              />
+            </TabsContent>
+          </Tabs>
+          
+          <DialogClose asChild>
+            <Button 
+              type="button" 
+              variant="outline" 
+              className="absolute top-2 right-2 h-8 w-8 p-0 rounded-full"
+            >
+              <X className="h-4 w-4" />
+              <span className="sr-only">Close</span>
+            </Button>
+          </DialogClose>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
