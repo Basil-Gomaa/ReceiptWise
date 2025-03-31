@@ -311,13 +311,14 @@ export default function Challenges() {
   // Add new challenge mutation
   const createChallengeMutation = useMutation({
     mutationFn: async (data: any) => {
+      // Format dates as ISO strings for the backend
       return apiRequest('POST', '/api/savings-challenges', {
         name: data.name,
         description: data.description || null,
         targetAmount: data.targetAmount,
         currentAmount: "0", // Start with 0 progress
-        startDate: data.startDate,
-        endDate: data.endDate,
+        startDate: data.startDate.toISOString(), // Convert Date to ISO string
+        endDate: data.endDate.toISOString(),     // Convert Date to ISO string
         status: "active",
         type: data.type,
         category: data.category,
