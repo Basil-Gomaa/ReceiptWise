@@ -23,7 +23,7 @@ export default function OcrProcessingUI({ progress, errorMessage }: OcrProcessin
     } else if (errorMessage) {
       return "bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800";
     } else {
-      return "bg-gray-50 dark:bg-gray-700";
+      return "bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700";
     }
   };
   
@@ -33,7 +33,7 @@ export default function OcrProcessingUI({ progress, errorMessage }: OcrProcessin
     } else if (errorMessage) {
       return <AlertTriangle className="h-6 w-6 text-red-500 mr-3" />;
     } else {
-      return <Shield className="h-6 w-6 text-primary-500 mr-3 animate-pulse" />;
+      return <Shield className="h-6 w-6 text-primary mr-3 animate-pulse" />;
     }
   };
   
@@ -53,34 +53,7 @@ export default function OcrProcessingUI({ progress, errorMessage }: OcrProcessin
     } else if (errorMessage) {
       return "text-red-600 dark:text-red-400";
     } else {
-      return "text-gray-600 dark:text-gray-400";
-    }
-  };
-
-  return (
-    <div className={`rounded-lg p-4 mb-4 ${getCardStyles()}`}>
-      <div className="flex items-center">
-        {getStatusIcon()}
-        <div>
-          <h3 className="text-lg font-semibold mb-1">{getStatusTitle()}</h3>
-          <p className={`text-sm ${getTextColor()}`}>
-            {errorMessage || "Analyzing receipt content..."}
-          </p>
-          {!errorMessage && (
-            <div className="w-full bg-gray-200 dark:bg-gray-600 h-1 mt-2 rounded-full overflow-hidden">
-              <div 
-                className="bg-primary-500 h-full rounded-full transition-all duration-300"
-                style={{ width: `${progress}%` }}
-              />
-            </div>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-      return "text-red-600 dark:text-red-400";
-    } else {
-      return "text-gray-500 dark:text-gray-400";
+      return "text-gray-700 dark:text-gray-300";
     }
   };
   
@@ -98,7 +71,7 @@ export default function OcrProcessingUI({ progress, errorMessage }: OcrProcessin
             
             <div className="flex items-center mb-4">
               {getStatusIcon()}
-              <h3 className="text-lg font-medium">
+              <h3 className="text-lg font-medium text-gray-900 dark:text-white">
                 {getStatusTitle()}
               </h3>
             </div>

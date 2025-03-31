@@ -67,10 +67,20 @@ export default function MonthlySpendingChart({ data }: MonthlySpendingChartProps
           formatter={(value) => [formatCurrency(value as number), "Total Spent"]}
           contentStyle={{ 
             borderRadius: '12px',
+            backgroundColor: '#ffffff',
             border: 'none',
             boxShadow: '0 4px 20px rgba(0, 0, 0, 0.1)',
             padding: '10px 14px',
-            fontSize: '13px'
+            fontSize: '13px',
+            color: '#333333'
+          }}
+          itemStyle={{
+            color: 'hsl(265, 85%, 50%)',
+            fontWeight: 600
+          }}
+          labelStyle={{
+            fontWeight: 500,
+            marginBottom: '4px'
           }}
           cursor={{ fill: 'rgba(180, 180, 250, 0.1)' }}
         />

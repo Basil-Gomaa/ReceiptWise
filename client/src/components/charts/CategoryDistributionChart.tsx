@@ -42,6 +42,7 @@ export default function CategoryDistributionChart({ data }: CategoryDistribution
         dominantBaseline="central"
         fontSize={12}
         fontWeight="bold"
+        className="drop-shadow-sm"
       >
         {`${(percent * 100).toFixed(0)}%`}
       </text>
