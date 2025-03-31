@@ -39,18 +39,18 @@ export default function Dashboard() {
       {/* Summary Stats Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 mb-6">
         {/* Total Expenses Card */}
-        <Card className="bg-primary dark:bg-primary text-primary-foreground dark:text-primary-foreground shadow-md overflow-hidden">
+        <Card className="stat-card-primary text-white shadow-md overflow-hidden">
           <CardContent className={`p-4 ${isMobile ? 'pb-3' : 'pb-4'}`}>
             <div className="flex items-center justify-between mb-1">
-              <h3 className="text-primary-foreground/80 dark:text-primary-foreground/90 font-medium text-sm">Total Expenses</h3>
-              <span className="text-primary-foreground/80 rounded-full bg-primary-foreground/20 p-1">
+              <h3 className="text-white/90 font-medium text-sm">Total Expenses</h3>
+              <span className="text-white/90 rounded-full bg-white/20 p-1">
                 <DollarSign className="h-4 w-4" />
               </span>
             </div>
             
             <div className="flex items-baseline gap-2">
               {receiptsLoading ? (
-                <Skeleton className="h-9 w-32 bg-primary-foreground/20" />
+                <Skeleton className="h-9 w-32 bg-white/20" />
               ) : (
                 <h2 className="text-2xl sm:text-3xl font-bold">{formatCurrency(totalExpenses)}</h2>
               )}
@@ -60,16 +60,16 @@ export default function Dashboard() {
               </Badge>
             </div>
             
-            <p className="text-primary-foreground/60 dark:text-primary-foreground/70 text-xs">vs last month</p>
+            <p className="text-white/60 text-xs">vs last month</p>
           </CardContent>
         </Card>
         
         {/* Receipts Card */}
-        <Card className="bg-indigo-600 dark:bg-navy-blue text-white shadow-md overflow-hidden">
+        <Card className="stat-card-secondary text-white shadow-md overflow-hidden">
           <CardContent className={`p-4 ${isMobile ? 'pb-3' : 'pb-4'}`}>
             <div className="flex items-center justify-between mb-1">
-              <h3 className="text-white/80 font-medium text-sm">Receipts Scanned</h3>
-              <span className="text-white/80 rounded-full bg-white/20 p-1">
+              <h3 className="text-white/90 font-medium text-sm">Receipts Scanned</h3>
+              <span className="text-white/90 rounded-full bg-white/20 p-1">
                 <Receipt className="h-4 w-4" />
               </span>
             </div>
@@ -91,11 +91,11 @@ export default function Dashboard() {
         </Card>
         
         {/* Top Category Card */}
-        <Card className="bg-indigo-700 dark:bg-navy-blue text-white shadow-md overflow-hidden">
+        <Card className="bg-gradient-to-br from-[#1e3a8a] to-[#1e40af] dark:from-[#0f172a] dark:to-[#172554] text-white shadow-md overflow-hidden">
           <CardContent className={`p-4 ${isMobile ? 'pb-3' : 'pb-4'}`}>
             <div className="flex items-center justify-between mb-1">
-              <h3 className="text-white/80 font-medium text-sm">Top Category</h3>
-              <span className="text-white/80 rounded-full bg-white/20 p-1">
+              <h3 className="text-white/90 font-medium text-sm">Top Category</h3>
+              <span className="text-white/90 rounded-full bg-white/20 p-1">
                 <Tag className="h-4 w-4" />
               </span>
             </div>
@@ -111,7 +111,7 @@ export default function Dashboard() {
                   ></span>
                   <h2 className="text-lg sm:text-xl font-semibold truncate">{topCategory.name}</h2>
                 </div>
-                <p className="text-white/60 text-xs">
+                <p className="text-white/70 text-xs">
                   {formatCurrency(topCategory.total)} 
                   ({totalExpenses > 0 ? Math.round((topCategory.total / totalExpenses) * 100) : 0}%)
                 </p>
@@ -119,7 +119,7 @@ export default function Dashboard() {
             ) : (
               <div>
                 <h2 className="text-lg sm:text-xl font-semibold">No data yet</h2>
-                <p className="text-white/60 text-xs">Add receipts to see stats</p>
+                <p className="text-white/70 text-xs">Add receipts to see stats</p>
               </div>
             )}
           </CardContent>
@@ -129,7 +129,7 @@ export default function Dashboard() {
       {/* Charts Section */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
         {/* Monthly Spending Chart */}
-        <Card className="shadow-sm">
+        <Card className="shadow-md bg-white dark:bg-[#0f172a]/80 border-0">
           <CardHeader className="pb-2">
             <div className="flex justify-between items-center">
               <CardTitle className="text-lg font-medium">Monthly Spending</CardTitle>
@@ -166,7 +166,7 @@ export default function Dashboard() {
         </Card>
         
         {/* Category Distribution Chart */}
-        <Card className="shadow-sm">
+        <Card className="shadow-md bg-white dark:bg-[#0f172a]/80 border-0">
           <CardHeader className="pb-2">
             <div className="flex justify-between items-center">
               <CardTitle className="text-lg font-medium">Expense Categories</CardTitle>
@@ -204,10 +204,29 @@ export default function Dashboard() {
       </div>
       
       {/* Recent Activity Section */}
-      <Card className="shadow-sm mb-8">
+      <Card className="shadow-md bg-white dark:bg-[#0f172a]/80 border-0 mb-8">
         <CardHeader className="pb-2">
-          <CardTitle className="text-lg font-medium">Recent Activity</CardTitle>
-          <CardDescription>Your latest receipt scans and entries</CardDescription>
+          <div className="flex justify-between items-center">
+            <div>
+              <CardTitle className="text-lg font-medium">Recent Transactions</CardTitle>
+              <CardDescription>Your latest receipt scans and entries</CardDescription>
+            </div>
+            <div className="flex items-center gap-2">
+              <button className="text-xs font-medium bg-gray-100 dark:bg-gray-800 px-3 py-1.5 rounded-full">
+                Sort ↑↓
+              </button>
+              <Select defaultValue="all">
+                <SelectTrigger className="h-8 text-xs w-[100px]">
+                  <SelectValue placeholder="Filter" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Types</SelectItem>
+                  <SelectItem value="food">Food & Dining</SelectItem>
+                  <SelectItem value="shopping">Shopping</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
         </CardHeader>
         
         <div className="divide-y divide-border">
@@ -225,34 +244,48 @@ export default function Dashboard() {
           ) : receipts && Array.isArray(receipts) && receipts.length > 0 ? (
             receipts.slice(0, 3).map((receipt: any) => (
               <div key={receipt.id} className="px-4 py-3 flex items-center gap-3">
-                <div className="h-8 w-8 rounded-full bg-primary/10 text-primary flex items-center justify-center">
-                  <Receipt className="h-4 w-4" />
+                <div className="h-10 w-10 rounded-full bg-primary/10 text-primary dark:bg-primary/20 dark:text-primary-foreground flex items-center justify-center shadow-sm">
+                  <Receipt className="h-5 w-5" />
                 </div>
                 
                 <div className="flex-1 min-w-0">
                   <p className="font-medium text-sm truncate">{receipt.merchantName}</p>
                   <p className="text-xs text-muted-foreground">
-                    {formatCurrency(receipt.total)}
+                    {new Date(receipt.date).toLocaleDateString(undefined, {month: 'short', day: 'numeric', year: '2-digit'})}
                     {receipt.categoryId && <span> • Categorized</span>}
                   </p>
                 </div>
                 
-                <div className="text-xs text-muted-foreground text-right">
-                  {new Date(receipt.date).toLocaleDateString(undefined, {month: 'short', day: 'numeric'})}
+                <div className="text-sm font-semibold">
+                  {formatCurrency(receipt.total)}
                 </div>
+                
+                <button className="text-muted-foreground opacity-50 hover:opacity-100">
+                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M8 3.5C8.28 3.5 8.5 3.72 8.5 4V12C8.5 12.28 8.28 12.5 8 12.5C7.72 12.5 7.5 12.28 7.5 12V4C7.5 3.72 7.72 3.5 8 3.5Z" fill="currentColor"/>
+                    <path d="M12 8.5C12.28 8.5 12.5 8.28 12.5 8C12.5 7.72 12.28 7.5 12 7.5L4 7.5C3.72 7.5 3.5 7.72 3.5 8C3.5 8.28 3.72 8.5 4 8.5L12 8.5Z" fill="currentColor"/>
+                  </svg>
+                </button>
               </div>
             ))
           ) : (
-            <div className="px-4 py-6 text-center">
-              <p className="text-muted-foreground text-sm">No receipts yet</p>
-              <p className="text-xs text-muted-foreground/80">Upload your first receipt to get started</p>
+            <div className="px-4 py-8 text-center">
+              <div className="flex flex-col items-center justify-center">
+                <div className="h-16 w-16 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center mb-3">
+                  <Receipt className="h-8 w-8 text-gray-400" />
+                </div>
+                <p className="text-muted-foreground text-sm font-medium">No transactions yet</p>
+                <p className="text-xs text-muted-foreground/80 max-w-xs mx-auto mt-1">
+                  Upload your first receipt by clicking the "Scan Receipt" button on the Receipts page
+                </p>
+              </div>
             </div>
           )}
         </div>
         
         <CardFooter className="px-4 py-2 justify-center">
           <button className="text-primary text-xs font-medium hover:underline">
-            View All Activity
+            View All Transactions →
           </button>
         </CardFooter>
       </Card>
