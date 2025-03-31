@@ -158,6 +158,16 @@ export default function Dashboard() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Financial Mood Indicator */}
+      <div className="mb-6">
+        <FinancialMoodIndicator
+          monthlySpending={comparisonData?.currentMonthTotal || 0}
+          previousMonthSpending={comparisonData?.lastMonthTotal || 0}
+          recentExpenses={Array.isArray(receipts) ? receipts : []}
+          isLoading={receiptsLoading || comparisonLoading}
+        />
+      </div>
       
       {/* Charts Section */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
