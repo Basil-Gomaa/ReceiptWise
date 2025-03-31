@@ -76,7 +76,7 @@ export default function FinancialMoodIndicator({
       case 'happy':
         return '😄';
       case 'neutral':
-        return '😐';
+        return '😌';
       case 'sad':
         return '😟';
       case 'unknown':
@@ -90,7 +90,7 @@ export default function FinancialMoodIndicator({
       case 'happy':
         return 'text-green-500 dark:text-green-400';
       case 'neutral':
-        return 'text-yellow-500 dark:text-yellow-400';
+        return 'text-blue-400 dark:text-blue-300';
       case 'sad':
         return 'text-red-500 dark:text-red-400';
       case 'unknown':
@@ -104,20 +104,39 @@ export default function FinancialMoodIndicator({
       case 'happy':
         return {
           animate: { rotate: [0, 5, 0, -5, 0] },
-          transition: { repeat: Infinity, duration: 2.5 }
+          transition: { 
+            repeat: Infinity, 
+            duration: 3.5,
+            ease: "easeInOut"
+          }
         };
       case 'neutral':
-        return {};
+        return {
+          animate: { scale: [1, 1.03, 1] },
+          transition: { 
+            repeat: Infinity, 
+            duration: 4,
+            ease: "easeInOut"
+          }
+        };
       case 'sad':
         return {
           animate: { y: [0, 3, 0] },
-          transition: { repeat: Infinity, duration: 2 }
+          transition: { 
+            repeat: Infinity, 
+            duration: 3,
+            ease: "easeInOut"
+          }
         };
       case 'unknown':
       default:
         return {
           animate: { rotate: [0, 360] },
-          transition: { repeat: Infinity, duration: 20, ease: "linear" }
+          transition: { 
+            repeat: Infinity, 
+            duration: 20, 
+            ease: "linear" 
+          }
         };
     }
   };
