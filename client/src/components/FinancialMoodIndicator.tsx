@@ -102,9 +102,9 @@ export default function FinancialMoodIndicator({
             initial={{ scale: 0.8 }}
             animate={{ scale: 1, rotate: [0, 10, 0] }}
             transition={{ repeat: Infinity, repeatType: "reverse", duration: 3 }}
-            className="text-6xl bg-green-100 dark:bg-green-900/30 w-20 h-20 rounded-full flex items-center justify-center text-green-500 dark:text-green-400"
+            className="text-6xl bg-green-100 dark:bg-green-900/30 w-20 h-20 rounded-full flex items-center justify-center"
           >
-            <Laugh className="w-12 h-12" />
+            <span className="text-5xl" role="img" aria-label="Grinning Face with Big Eyes">😄</span>
           </motion.div>
         );
       case 'good':
@@ -113,15 +113,15 @@ export default function FinancialMoodIndicator({
             initial={{ y: 0 }}
             animate={{ y: [0, -5, 0] }}
             transition={{ repeat: Infinity, repeatType: "reverse", duration: 2 }}
-            className="text-6xl bg-blue-100 dark:bg-blue-900/30 w-20 h-20 rounded-full flex items-center justify-center text-blue-500 dark:text-blue-400"
+            className="text-6xl bg-blue-100 dark:bg-blue-900/30 w-20 h-20 rounded-full flex items-center justify-center"
           >
-            <Smile className="w-12 h-12" />
+            <span className="text-5xl" role="img" aria-label="Slightly Smiling Face">🙂</span>
           </motion.div>
         );
       case 'neutral':
         return (
-          <div className="text-6xl bg-gray-100 dark:bg-gray-800 w-20 h-20 rounded-full flex items-center justify-center text-yellow-500 dark:text-yellow-400">
-            <Meh className="w-12 h-12" />
+          <div className="text-6xl bg-gray-100 dark:bg-gray-800 w-20 h-20 rounded-full flex items-center justify-center">
+            <span className="text-5xl" role="img" aria-label="Neutral Face">😐</span>
           </div>
         );
       case 'concerned':
@@ -129,9 +129,9 @@ export default function FinancialMoodIndicator({
           <motion.div 
             animate={{ rotate: [-2, 2, -2] }}
             transition={{ repeat: Infinity, duration: 1.5 }}
-            className="text-6xl bg-red-100 dark:bg-red-900/30 w-20 h-20 rounded-full flex items-center justify-center text-red-500 dark:text-red-400"
+            className="text-6xl bg-red-100 dark:bg-red-900/30 w-20 h-20 rounded-full flex items-center justify-center"
           >
-            <Frown className="w-12 h-12" />
+            <span className="text-5xl" role="img" aria-label="Worried Face">😟</span>
           </motion.div>
         );
       case 'unknown':
@@ -140,9 +140,9 @@ export default function FinancialMoodIndicator({
           <motion.div
             animate={{ rotate: [0, 360] }}
             transition={{ repeat: Infinity, duration: 20, ease: "linear" }}
-            className="text-6xl bg-purple-100 dark:bg-purple-900/30 w-20 h-20 rounded-full flex items-center justify-center text-purple-500 dark:text-purple-400"
+            className="text-6xl bg-purple-100 dark:bg-purple-900/30 w-20 h-20 rounded-full flex items-center justify-center"
           >
-            <HelpCircle className="w-12 h-12" />
+            <span className="text-5xl" role="img" aria-label="Thinking Face">🤔</span>
           </motion.div>
         );
     }
