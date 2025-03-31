@@ -55,12 +55,8 @@ export default function TabNavigation() {
         <div 
           className="absolute h-[calc(100%-16px)] top-2 bg-primary rounded-full transition-all duration-300 ease-out"
           style={{
-            left: activeIndex === 0 
-              ? `4px` 
-              : `calc(${activeIndex * 25}% + 8px)`,
-            width: activeIndex === 0 
-              ? 'calc(25% - 28px)' 
-              : 'calc(25% - 16px)',
+            left: `calc(${activeIndex * 25}% + 8px)`,
+            width: 'calc(25% - 16px)',
             opacity: 1,
             zIndex: 0,
           }}
@@ -68,7 +64,7 @@ export default function TabNavigation() {
         
         <div className="flex items-center justify-between relative z-10 w-full">
           {navItemsData.map((item, index) => (
-            <Link key={item.path} href={item.path} className={`${item.label === "Home" ? "w-[120px] -ml-4" : "w-[145px]"} text-center`}>
+            <Link key={item.path} href={item.path} className="w-1/4 text-center">
               <div 
                 className={`
                   flex items-center justify-center gap-2 py-3 rounded-full transition-colors duration-200
