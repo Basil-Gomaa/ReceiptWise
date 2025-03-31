@@ -1,4 +1,4 @@
-import { pgTable, text, serial, integer, boolean, timestamp, numeric } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, boolean, timestamp, numeric, jsonb } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -35,6 +35,30 @@ export const expenseItems = pgTable("expense_items", {
   quantity: numeric("quantity", { precision: 10, scale: 2 }).default("1"),
 });
 
+export const savingsChallenges = pgTable("savings_challenges", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  description: text("description"),
+  targetAmount: numeric("target_amount", { precision: 10, scale: 2 }).notNull(),
+  currentAmount: numeric("current_amount", { precision: 10, scale: 2 }).default("0").notNull(),
+  startDate: timestamp("start_date").notNull(),
+  endDate: timestamp("end_date").notNull(),
+  userId: integer("user_id"),
+  status: text("status").default("active").notNull(), // active, completed, failed
+  type: text("type").notNull(), // weekly, monthly, custom
+  category: text("category").notNull(), // dining, shopping, transportation, etc.
+  difficulty: text("difficulty").notNull(), // easy, medium, hard
+  icon: text("icon"),
+  colorScheme: text("color_scheme"),
+  milestones: jsonb("milestones").$type<Array<{
+    amount: number;
+    reached: boolean;
+    reward: string;
+  }>>(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
 // Insert schemas
 export const insertUserSchema = createInsertSchema(users).pick({
   username: true,
@@ -64,13 +88,32 @@ export const insertExpenseItemSchema = createInsertSchema(expenseItems).pick({
   quantity: true,
 });
 
+export const insertSavingsChallengeSchema = createInsertSchema(savingsChallenges).pick({
+  name: true,
+  description: true,
+  targetAmount: true,
+  currentAmount: true,
+  startDate: true,
+  endDate: true,
+  userId: true,
+  status: true,
+  type: true,
+  category: true,
+  difficulty: true,
+  icon: true,
+  colorScheme: true,
+  milestones: true,
+});
+
 // Types
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type InsertCategory = z.infer<typeof insertCategorySchema>;
 export type InsertReceipt = z.infer<typeof insertReceiptSchema>;
 export type InsertExpenseItem = z.infer<typeof insertExpenseItemSchema>;
+export type InsertSavingsChallenge = z.infer<typeof insertSavingsChallengeSchema>;
 
 export type User = typeof users.$inferSelect;
 export type Category = typeof categories.$inferSelect;
 export type Receipt = typeof receipts.$inferSelect;
 export type ExpenseItem = typeof expenseItems.$inferSelect;
+export type SavingsChallenge = typeof savingsChallenges.$inferSelect;

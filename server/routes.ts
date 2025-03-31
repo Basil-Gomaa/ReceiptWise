@@ -4,13 +4,13 @@ import { storage } from "./storage";
 import multer from "multer";
 import path from "path";
 import fs from "fs/promises";
-import { insertCategorySchema, insertReceiptSchema } from "@shared/schema";
+import { insertCategorySchema, insertReceiptSchema, insertSavingsChallengeSchema } from "@shared/schema";
 import { z } from "zod";
 import { ZodError } from "zod";
 import { fromZodError } from "zod-validation-error";
 import { ImageAnnotatorClient } from "@google-cloud/vision";
 import { GoogleGenerativeAI, HarmCategory, HarmBlockThreshold } from "@google/generative-ai";
-import { seedDummyReceipts } from "./seed-data";
+import { seedDummyReceipts, seedSavingsChallenges } from "./seed-data";
 
 // Add multer middleware types
 interface MulterRequest extends Request {
@@ -157,8 +157,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Seed data endpoint
   app.post("/api/seed", async (req, res) => {
     try {
-      const count = await seedDummyReceipts();
-      res.status(201).json({ message: `Created ${count} dummy receipts successfully` });
+      const receiptCount = await seedDummyReceipts();
+      const challengeCount = await seedSavingsChallenges();
+      res.status(201).json({ 
+        message: `Created ${receiptCount} dummy receipts and ${challengeCount} savings challenges successfully` 
+      });
     } catch (error) {
       handleError(res, error);
     }
@@ -1148,6 +1151,98 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .filter(category => category.total > 0);
       
       res.json(result);
+    } catch (error) {
+      handleError(res, error);
+    }
+  });
+  
+  // SAVINGS CHALLENGE ENDPOINTS
+  app.get("/api/savings-challenges", async (req, res) => {
+    try {
+      const challenges = await storage.getAllSavingsChallenges();
+      res.json(challenges);
+    } catch (error) {
+      handleError(res, error);
+    }
+  });
+  
+  app.get("/api/savings-challenges/active", async (req, res) => {
+    try {
+      const challenges = await storage.getActiveSavingsChallenges();
+      res.json(challenges);
+    } catch (error) {
+      handleError(res, error);
+    }
+  });
+  
+  app.get("/api/savings-challenges/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const challenge = await storage.getSavingsChallenge(id);
+      
+      if (!challenge) {
+        return res.status(404).json({ message: "Savings challenge not found" });
+      }
+      
+      res.json(challenge);
+    } catch (error) {
+      handleError(res, error);
+    }
+  });
+  
+  app.post("/api/savings-challenges", async (req, res) => {
+    try {
+      const challengeData = insertSavingsChallengeSchema.parse(req.body);
+      const newChallenge = await storage.createSavingsChallenge(challengeData);
+      res.status(201).json(newChallenge);
+    } catch (error) {
+      handleError(res, error);
+    }
+  });
+  
+  app.put("/api/savings-challenges/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const challengeData = insertSavingsChallengeSchema.partial().parse(req.body);
+      const updatedChallenge = await storage.updateSavingsChallenge(id, challengeData);
+      
+      if (!updatedChallenge) {
+        return res.status(404).json({ message: "Savings challenge not found" });
+      }
+      
+      res.json(updatedChallenge);
+    } catch (error) {
+      handleError(res, error);
+    }
+  });
+  
+  app.post("/api/savings-challenges/:id/progress", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const { amount } = z.object({ amount: z.number() }).parse(req.body);
+      
+      const updatedChallenge = await storage.updateChallengeProgress(id, amount);
+      
+      if (!updatedChallenge) {
+        return res.status(404).json({ message: "Savings challenge not found" });
+      }
+      
+      res.json(updatedChallenge);
+    } catch (error) {
+      handleError(res, error);
+    }
+  });
+  
+  app.delete("/api/savings-challenges/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const success = await storage.deleteSavingsChallenge(id);
+      
+      if (!success) {
+        return res.status(404).json({ message: "Savings challenge not found" });
+      }
+      
+      res.status(204).end();
     } catch (error) {
       handleError(res, error);
     }

@@ -1,5 +1,5 @@
 import { Link, useLocation } from "wouter";
-import { ReceiptText, Tags, Settings as SettingsIcon, PieChart } from "lucide-react";
+import { ReceiptText, Tags, Settings as SettingsIcon, PieChart, Target, Trophy } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 
 // Navigation items
@@ -7,6 +7,7 @@ const navItems = [
   { path: "/", label: "Home", Icon: PieChart },
   { path: "/receipts", label: "Receipts", Icon: ReceiptText },
   { path: "/categories", label: "Categories", Icon: Tags },
+  { path: "/challenges", label: "Challenges", Icon: Trophy },
   { path: "/settings", label: "Settings", Icon: SettingsIcon },
 ];
 
@@ -25,7 +26,7 @@ export default function TabNavigation() {
               <Link 
                 key={item.path} 
                 href={item.path}
-                className="w-1/4 text-center py-3"
+                className="w-1/5 text-center py-3"
               >
                 <div 
                   className={`flex flex-col items-center ${

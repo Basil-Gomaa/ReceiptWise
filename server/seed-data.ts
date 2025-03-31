@@ -1,5 +1,5 @@
 import { storage } from './storage';
-import { InsertReceipt } from '../shared/schema';
+import { InsertReceipt, InsertSavingsChallenge } from '../shared/schema';
 
 // Random merchant names for each category
 const merchantsByCategory = {
@@ -164,4 +164,151 @@ export async function seedDummyReceipts() {
   // Return receipt count to confirm
   const receipts = await storage.getAllReceipts();
   return receipts.length;
+}
+
+// Create seed savings challenges
+export async function seedSavingsChallenges() {
+  // Sample challenges data
+  const challengeTypes = ["weekly", "monthly"];
+  const challengeDifficulties = ["easy", "medium", "hard"];
+  const categories = ["Food & Dining", "Groceries", "Transportation", "Coffee", "Shopping", "Entertainment"];
+  const icons = ["coffee", "utensils", "shopping-bag", "target", "trophy"];
+  const colorSchemes = ["#3B82F6", "#10B981", "#EC4899", "#F59E0B", "#6366F1", "#8B5CF6"];
+  
+  // Sample challenges
+  const challengeTemplates = [
+    {
+      name: "Coffee Break Challenge",
+      description: "Cut back on coffee expenses this week and save money by making coffee at home.",
+      type: "weekly",
+      category: "Food & Dining",
+      difficulty: "easy",
+      icon: "coffee",
+      targetAmount: randomAmount(20, 40).toString(),
+      colorScheme: "#3B82F6",
+      status: "active"
+    },
+    {
+      name: "Grocery Smart Saver",
+      description: "Plan your meals and shop with a list to reduce your grocery spending.",
+      type: "weekly",
+      category: "Groceries",
+      difficulty: "medium",
+      icon: "shopping-bag",
+      targetAmount: randomAmount(40, 80).toString(),
+      colorScheme: "#10B981",
+      status: "active"
+    },
+    {
+      name: "Transportation Trim",
+      description: "Use public transit or bike instead of rideshares to reach your saving goal.",
+      type: "weekly",
+      category: "Transportation", 
+      difficulty: "medium",
+      icon: "target",
+      targetAmount: randomAmount(30, 60).toString(),
+      colorScheme: "#F59E0B",
+      status: "active"
+    },
+    {
+      name: "No-Spend Weekend",
+      description: "Challenge yourself to spend $0 on entertainment this weekend.",
+      type: "weekly",
+      category: "Entertainment",
+      difficulty: "hard",
+      icon: "trophy",
+      targetAmount: randomAmount(50, 100).toString(),
+      colorScheme: "#8B5CF6",
+      status: "active"
+    },
+    {
+      name: "Dining Out Detox",
+      description: "Cook at home instead of eating out this month and save the difference.",
+      type: "monthly",
+      category: "Food & Dining",
+      difficulty: "hard",
+      icon: "utensils",
+      targetAmount: randomAmount(120, 200).toString(),
+      colorScheme: "#EC4899",
+      status: "active"
+    },
+    {
+      name: "Completed Challenge",
+      description: "This challenge is already completed. You've reached your goal!",
+      type: "weekly",
+      category: "Shopping",
+      difficulty: "easy",
+      icon: "trophy",
+      targetAmount: "50",
+      currentAmount: "50",
+      colorScheme: "#6366F1",
+      status: "completed"
+    }
+  ];
+  
+  // Create a date for challenges
+  const today = new Date();
+  
+  for (const template of challengeTemplates) {
+    // Set start/end dates based on type
+    const startDate = new Date(today);
+    const endDate = new Date(today);
+    
+    if (template.type === "weekly") {
+      // Weekly challenge ends in 7 days
+      endDate.setDate(today.getDate() + 7);
+    } else {
+      // Monthly challenge ends in 30 days
+      endDate.setDate(today.getDate() + 30);
+    }
+    
+    // Add milestones for challenge
+    let milestones = null;
+    const targetAmount = parseFloat(template.targetAmount);
+    
+    if (targetAmount > 0) {
+      // Create 3 milestones at 25%, 50%, and 75% of the target
+      milestones = [
+        {
+          amount: Math.round(targetAmount * 0.25 * 100) / 100,
+          reached: template.status === "completed" ? true : false,
+          reward: "Achievement Badge"
+        },
+        {
+          amount: Math.round(targetAmount * 0.5 * 100) / 100,
+          reached: template.status === "completed" ? true : false,
+          reward: "Special Status"
+        },
+        {
+          amount: Math.round(targetAmount * 0.75 * 100) / 100,
+          reached: template.status === "completed" ? true : false,
+          reward: "Progress Boost"
+        }
+      ];
+    }
+    
+    // Create the challenge
+    const challenge: InsertSavingsChallenge = {
+      name: template.name,
+      description: template.description,
+      targetAmount: template.targetAmount,
+      currentAmount: template.currentAmount || "0",
+      startDate: startDate,
+      endDate: endDate,
+      status: template.status,
+      type: template.type,
+      category: template.category,
+      difficulty: template.difficulty,
+      icon: template.icon,
+      colorScheme: template.colorScheme,
+      milestones: milestones,
+      userId: null
+    };
+    
+    await storage.createSavingsChallenge(challenge);
+  }
+  
+  // Return challenge count to confirm
+  const challenges = await storage.getAllSavingsChallenges();
+  return challenges.length;
 }

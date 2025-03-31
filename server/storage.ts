@@ -2,7 +2,8 @@ import {
   users, type User, type InsertUser,
   categories, type Category, type InsertCategory,
   receipts, type Receipt, type InsertReceipt,
-  expenseItems, type ExpenseItem, type InsertExpenseItem
+  expenseItems, type ExpenseItem, type InsertExpenseItem,
+  savingsChallenges, type SavingsChallenge, type InsertSavingsChallenge
 } from "@shared/schema";
 
 export interface IStorage {
@@ -30,6 +31,15 @@ export interface IStorage {
   createExpenseItem(expenseItem: InsertExpenseItem): Promise<ExpenseItem>;
   updateExpenseItem(id: number, expenseItem: Partial<InsertExpenseItem>): Promise<ExpenseItem | undefined>;
   deleteExpenseItem(id: number): Promise<boolean>;
+  
+  // Savings Challenges
+  getAllSavingsChallenges(): Promise<SavingsChallenge[]>;
+  getSavingsChallenge(id: number): Promise<SavingsChallenge | undefined>;
+  createSavingsChallenge(challenge: InsertSavingsChallenge): Promise<SavingsChallenge>;
+  updateSavingsChallenge(id: number, challenge: Partial<InsertSavingsChallenge>): Promise<SavingsChallenge | undefined>;
+  deleteSavingsChallenge(id: number): Promise<boolean>;
+  getActiveSavingsChallenges(): Promise<SavingsChallenge[]>;
+  updateChallengeProgress(id: number, amount: number): Promise<SavingsChallenge | undefined>;
 }
 
 export class MemStorage implements IStorage {
@@ -37,20 +47,24 @@ export class MemStorage implements IStorage {
   private categories: Map<number, Category>;
   private receipts: Map<number, Receipt>;
   private expenseItems: Map<number, ExpenseItem>;
+  private savingsChallenges: Map<number, SavingsChallenge>;
   private userId: number;
   private categoryId: number;
   private receiptId: number;
   private expenseItemId: number;
+  private savingsChallengeId: number;
 
   constructor() {
     this.users = new Map();
     this.categories = new Map();
     this.receipts = new Map();
     this.expenseItems = new Map();
+    this.savingsChallenges = new Map();
     this.userId = 1;
     this.categoryId = 1;
     this.receiptId = 1;
     this.expenseItemId = 1;
+    this.savingsChallengeId = 1;
     
     // Create default categories
     const defaultCategories: InsertCategory[] = [
@@ -64,6 +78,79 @@ export class MemStorage implements IStorage {
     
     for (const category of defaultCategories) {
       this.createCategory(category);
+    }
+    
+    // Create some default savings challenges
+    const today = new Date();
+    const nextWeek = new Date(today);
+    nextWeek.setDate(today.getDate() + 7);
+    
+    const nextMonth = new Date(today);
+    nextMonth.setMonth(today.getMonth() + 1);
+    
+    const defaultChallenges: InsertSavingsChallenge[] = [
+      {
+        name: 'Coffee Budget Challenge',
+        description: 'Cut your coffee spending by 30% this week',
+        targetAmount: '20',
+        currentAmount: '0',
+        startDate: today,
+        endDate: nextWeek,
+        status: 'active',
+        type: 'weekly',
+        category: 'Food & Dining',
+        difficulty: 'easy',
+        icon: 'coffee',
+        colorScheme: '#3B82F6',
+        milestones: [
+          { amount: 5, reached: false, reward: '🌟 Achievement Unlocked: Coffee Cutback' },
+          { amount: 10, reached: false, reward: '🏆 Halfway There! Keep Going!' },
+          { amount: 20, reached: false, reward: '🎉 Challenge Complete! You saved $20 on coffee!' }
+        ]
+      },
+      {
+        name: 'No Dining Out',
+        description: 'Cook all meals at home for the next week',
+        targetAmount: '50',
+        currentAmount: '0',
+        startDate: today,
+        endDate: nextWeek,
+        status: 'active',
+        type: 'weekly',
+        category: 'Food & Dining',
+        difficulty: 'medium',
+        icon: 'utensils',
+        colorScheme: '#10B981',
+        milestones: [
+          { amount: 15, reached: false, reward: '🌟 Achievement Unlocked: Home Chef' },
+          { amount: 30, reached: false, reward: '🏆 Making Progress! Keep Cooking!' },
+          { amount: 50, reached: false, reward: '🎉 Challenge Complete! You saved $50 on dining out!' }
+        ]
+      },
+      {
+        name: 'Shopping Freeze Challenge',
+        description: 'Avoid impulse purchases for the month',
+        targetAmount: '100',
+        currentAmount: '0',
+        startDate: today,
+        endDate: nextMonth,
+        status: 'active',
+        type: 'monthly',
+        category: 'Shopping',
+        difficulty: 'hard',
+        icon: 'shopping-bag',
+        colorScheme: '#EC4899',
+        milestones: [
+          { amount: 25, reached: false, reward: '🌟 Achievement Unlocked: Impulse Control' },
+          { amount: 50, reached: false, reward: '🏆 Halfway! Your wallet thanks you!' },
+          { amount: 75, reached: false, reward: '🎖️ Nearly there! Stay strong!' },
+          { amount: 100, reached: false, reward: '🎉 Challenge Complete! You saved $100 on impulse buys!' }
+        ]
+      }
+    ];
+    
+    for (const challenge of defaultChallenges) {
+      this.createSavingsChallenge(challenge);
     }
   }
 
@@ -183,6 +270,82 @@ export class MemStorage implements IStorage {
 
   async deleteExpenseItem(id: number): Promise<boolean> {
     return this.expenseItems.delete(id);
+  }
+  
+  // Savings Challenge methods
+  async getAllSavingsChallenges(): Promise<SavingsChallenge[]> {
+    return Array.from(this.savingsChallenges.values());
+  }
+  
+  async getSavingsChallenge(id: number): Promise<SavingsChallenge | undefined> {
+    return this.savingsChallenges.get(id);
+  }
+  
+  async createSavingsChallenge(insertChallenge: InsertSavingsChallenge): Promise<SavingsChallenge> {
+    const id = this.savingsChallengeId++;
+    const challenge: SavingsChallenge = {
+      ...insertChallenge,
+      id,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
+    this.savingsChallenges.set(id, challenge);
+    return challenge;
+  }
+  
+  async updateSavingsChallenge(id: number, challengeData: Partial<InsertSavingsChallenge>): Promise<SavingsChallenge | undefined> {
+    const challenge = this.savingsChallenges.get(id);
+    if (!challenge) return undefined;
+    
+    const updatedChallenge = { 
+      ...challenge, 
+      ...challengeData,
+      updatedAt: new Date()
+    };
+    this.savingsChallenges.set(id, updatedChallenge);
+    return updatedChallenge;
+  }
+  
+  async deleteSavingsChallenge(id: number): Promise<boolean> {
+    return this.savingsChallenges.delete(id);
+  }
+  
+  async getActiveSavingsChallenges(): Promise<SavingsChallenge[]> {
+    return Array.from(this.savingsChallenges.values())
+      .filter(challenge => challenge.status === 'active');
+  }
+  
+  async updateChallengeProgress(id: number, amount: number): Promise<SavingsChallenge | undefined> {
+    const challenge = this.savingsChallenges.get(id);
+    if (!challenge) return undefined;
+    
+    // Update the current amount
+    const currentAmount = Number(challenge.currentAmount) + amount;
+    
+    // Check if any milestones need to be updated
+    const updatedMilestones = challenge.milestones?.map(milestone => {
+      if (!milestone.reached && currentAmount >= milestone.amount) {
+        return { ...milestone, reached: true };
+      }
+      return milestone;
+    }) || [];
+    
+    // Check if challenge is completed
+    const status = 
+      currentAmount >= Number(challenge.targetAmount) 
+        ? 'completed' 
+        : challenge.status;
+    
+    const updatedChallenge = { 
+      ...challenge, 
+      currentAmount: currentAmount.toString(),
+      milestones: updatedMilestones,
+      status,
+      updatedAt: new Date()
+    };
+    
+    this.savingsChallenges.set(id, updatedChallenge);
+    return updatedChallenge;
   }
 }
 

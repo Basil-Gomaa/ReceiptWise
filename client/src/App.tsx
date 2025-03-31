@@ -7,6 +7,7 @@ import NotFound from "@/pages/not-found";
 import Dashboard from "@/pages/Dashboard";
 import Receipts from "@/pages/Receipts";
 import Categories from "@/pages/Categories";
+import Challenges from "@/pages/Challenges";
 import SettingsPage from "@/pages/Settings";
 import Header from "@/components/Header";
 import TabNavigation from "@/components/TabNavigation";
@@ -24,6 +25,7 @@ function Router() {
           <Route path="/" component={Dashboard} />
           <Route path="/receipts" component={Receipts} />
           <Route path="/categories" component={Categories} />
+          <Route path="/challenges" component={Challenges} />
           <Route path="/settings" component={SettingsPage} />
           <Route component={NotFound} />
         </Switch>
