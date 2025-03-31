@@ -47,13 +47,13 @@ export default function TabNavigation() {
     );
   }
   
-  // Desktop navigation - more reliable approach with percentages
+  // Desktop navigation - with fixed equal widths and increased spacing
   return (
     <div className="mb-8 flex justify-center sm:justify-start">
-      <div className="glass-effect rounded-full p-1.5 flex items-center justify-between shadow-sm relative">
+      <div className="glass-effect rounded-full p-2 flex items-center shadow-md relative">
         {/* Background indicator - using percentages for positioning */}
         <div 
-          className="absolute h-[calc(100%-12px)] top-1.5 bg-primary rounded-full transition-all duration-300 ease-out"
+          className="absolute h-[calc(100%-16px)] top-2 bg-primary rounded-full transition-all duration-300 ease-out"
           style={{
             left: `calc(${activeIndex * 25}% + 8px)`,
             width: 'calc(25% - 16px)',
@@ -62,22 +62,23 @@ export default function TabNavigation() {
           }}
         />
         
-        {navItemsData.map((item, index) => (
-          <Link key={item.path} href={item.path}>
-            <div 
-              className={`
-                flex items-center gap-2 px-4 py-2 rounded-full transition-colors duration-200 w-full
-                ${isActive(item.path) 
-                  ? "text-white dark:text-[#0f172a] font-medium" 
-                  : "text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white"}
-              `}
-              style={{ position: 'relative', zIndex: 1 }}
-            >
-              <item.Icon className="h-4 w-4" />
-              <span className="text-sm">{item.label}</span>
-            </div>
-          </Link>
-        ))}
+        <div className="flex items-center justify-between relative z-10 w-full">
+          {navItemsData.map((item, index) => (
+            <Link key={item.path} href={item.path} className="w-[145px] text-center">
+              <div 
+                className={`
+                  flex items-center justify-center gap-3 px-4 py-3 rounded-full transition-colors duration-200
+                  ${isActive(item.path) 
+                    ? "text-white dark:text-[#0f172a] font-medium" 
+                    : "text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white"}
+                `}
+              >
+                <item.Icon className="h-5 w-5" />
+                <span className="text-sm font-medium">{item.label}</span>
+              </div>
+            </Link>
+          ))}
+        </div>
       </div>
     </div>
   );
