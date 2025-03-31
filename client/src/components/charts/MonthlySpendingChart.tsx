@@ -55,7 +55,8 @@ export default function MonthlySpendingChart({ data }: MonthlySpendingChartProps
         <CartesianGrid 
           strokeDasharray="3 3" 
           vertical={false} 
-          stroke={isDarkMode ? "#2d3748" : "#f0f0f0"} 
+          stroke={isDarkMode ? "#1e293b" : "#f0f0f0"} 
+          opacity={isDarkMode ? 0.4 : 0.7}
         />
         <XAxis 
           dataKey="name" 
@@ -99,9 +100,7 @@ export default function MonthlySpendingChart({ data }: MonthlySpendingChartProps
           fill="#0ea5e9" 
           radius={[8, 8, 0, 0] as any}
           maxBarSize={45}
-          background={{ 
-            fill: isDarkMode ? '#1e293b' : '#f5f5f5' 
-          }}
+          // Removed background for cleaner appearance
         />
       </BarChart>
     </ResponsiveContainer>
