@@ -4,7 +4,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 
 // Define navigation items outside the component
 const navItemsData = [
-  { path: "/", label: "Dashboard", Icon: PieChart },
+  { path: "/", label: "Home", Icon: PieChart },
   { path: "/receipts", label: "Receipts", Icon: ReceiptText },
   { path: "/categories", label: "Categories", Icon: Tags },
   { path: "/settings", label: "Settings", Icon: SettingsIcon },
@@ -25,7 +25,7 @@ export default function TabNavigation() {
         <div className="flex items-center justify-between relative">
           {/* Background indicator - pure CSS */}
           <div 
-            className="absolute top-0 h-full bg-primary/10 dark:bg-primary/20 rounded-full -z-10 transition-all duration-300" 
+            className="absolute top-1 h-[calc(100%-8px)] bg-primary/10 dark:bg-primary/20 rounded-full -z-10 transition-all duration-300" 
             style={{
               left: `${activeIndex * 25}%`,
               width: '25%',
@@ -38,7 +38,7 @@ export default function TabNavigation() {
                 isActive(item.path) ? "text-primary font-medium" : "text-gray-600 dark:text-gray-400"
               }`}>
                 <item.Icon className="h-5 w-5" />
-                <span className="text-[10px] mt-1">{item.label}</span>
+                <span className="text-[11px] mt-1.5 font-medium">{item.label}</span>
               </div>
             </Link>
           ))}
