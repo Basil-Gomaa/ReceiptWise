@@ -65,7 +65,7 @@ export default function Dashboard() {
         </Card>
         
         {/* Receipts Card */}
-        <Card className="bg-navy-blue text-white shadow-md overflow-hidden">
+        <Card className="bg-indigo-600 dark:bg-navy-blue text-white shadow-md overflow-hidden">
           <CardContent className={`p-4 ${isMobile ? 'pb-3' : 'pb-4'}`}>
             <div className="flex items-center justify-between mb-1">
               <h3 className="text-white/80 font-medium text-sm">Receipts Scanned</h3>
@@ -91,7 +91,7 @@ export default function Dashboard() {
         </Card>
         
         {/* Top Category Card */}
-        <Card className="bg-navy-blue text-white shadow-md overflow-hidden">
+        <Card className="bg-indigo-700 dark:bg-navy-blue text-white shadow-md overflow-hidden">
           <CardContent className={`p-4 ${isMobile ? 'pb-3' : 'pb-4'}`}>
             <div className="flex items-center justify-between mb-1">
               <h3 className="text-white/80 font-medium text-sm">Top Category</h3>
@@ -155,7 +155,7 @@ export default function Dashboard() {
               ) : monthlyData && Array.isArray(monthlyData) && monthlyData.length > 0 ? (
                 <MonthlySpendingChart data={monthlyData} />
               ) : (
-                <div className="h-full w-full flex flex-col items-center justify-center text-muted-foreground">
+                <div className="h-full w-full flex flex-col items-center justify-center bg-white dark:bg-gray-900 rounded-lg text-gray-600 dark:text-gray-400">
                   <BarChart className="h-12 w-12 mb-2 opacity-20" />
                   <p className="text-sm">No spending data available</p>
                   <p className="text-xs">Add receipts to see your monthly trends</p>
@@ -192,7 +192,7 @@ export default function Dashboard() {
               ) : categoryData && Array.isArray(categoryData) && categoryData.length > 0 ? (
                 <CategoryDistributionChart data={categoryData} />
               ) : (
-                <div className="h-full w-full flex flex-col items-center justify-center text-muted-foreground">
+                <div className="h-full w-full flex flex-col items-center justify-center bg-white dark:bg-gray-900 rounded-lg text-gray-600 dark:text-gray-400">
                   <PieChartIcon className="h-12 w-12 mb-2 opacity-20" />
                   <p className="text-sm">No category data available</p>
                   <p className="text-xs">Add and categorize receipts to see distribution</p>
