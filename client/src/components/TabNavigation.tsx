@@ -1,37 +1,29 @@
 import { Link, useLocation } from "wouter";
-import { BarChart, ReceiptText, Tags, Settings as SettingsIcon, PieChart } from "lucide-react";
+import { ReceiptText, Tags, Settings as SettingsIcon, PieChart } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { useEffect, useState } from "react";
-import { animated, useSpring } from "@react-spring/web";
+
+// Define navigation items outside the component
+const navItemsData = [
+  { path: "/", label: "Dashboard", Icon: PieChart },
+  { path: "/receipts", label: "Receipts", Icon: ReceiptText },
+  { path: "/categories", label: "Categories", Icon: Tags },
+  { path: "/settings", label: "Settings", Icon: SettingsIcon },
+];
 
 export default function TabNavigation() {
   const [location] = useLocation();
   const isMobile = useIsMobile();
   const isActive = (path: string) => location === path;
-
-  // Navigation items definition 
-  const navItems = [
-    { path: "/", icon: isMobile ? <PieChart className="h-5 w-5" /> : <PieChart className="h-4 w-4" />, label: "Dashboard" },
-    { path: "/receipts", icon: isMobile ? <ReceiptText className="h-5 w-5" /> : <ReceiptText className="h-4 w-4" />, label: "Receipts" },
-    { path: "/categories", icon: isMobile ? <Tags className="h-5 w-5" /> : <Tags className="h-4 w-4" />, label: "Categories" },
-    { path: "/settings", icon: isMobile ? <SettingsIcon className="h-5 w-5" /> : <SettingsIcon className="h-4 w-4" />, label: "Settings" },
-  ];
   
   // Find active index
-  const activeIndex = navItems.findIndex(item => item.path === location);
+  const activeIndex = navItemsData.findIndex(item => item.path === location);
   
-  // Mobile navigation
+  // Mobile navigation - using CSS only
   if (isMobile) {
-    // Animation properties for mobile
-    const [styles] = useState({
-      left: `${activeIndex * 25}%`,
-      width: '25%',
-    });
-    
     return (
       <div className="fixed bottom-4 left-4 right-4 z-40 glass-effect shadow-lg rounded-full pb-safe">
         <div className="flex items-center justify-between relative">
-          {/* Background indicator */}
+          {/* Background indicator - pure CSS */}
           <div 
             className="absolute top-0 h-full bg-primary/10 dark:bg-primary/20 rounded-full -z-10 transition-all duration-300" 
             style={{
@@ -40,12 +32,12 @@ export default function TabNavigation() {
             }}
           />
           
-          {navItems.map((item) => (
+          {navItemsData.map((item) => (
             <Link key={item.path} href={item.path} className="w-1/4">
               <div className={`flex flex-col items-center py-3 ${
                 isActive(item.path) ? "text-primary font-medium" : "text-gray-600 dark:text-gray-400"
               }`}>
-                {item.icon}
+                <item.Icon className="h-5 w-5" />
                 <span className="text-[10px] mt-1">{item.label}</span>
               </div>
             </Link>
@@ -55,21 +47,27 @@ export default function TabNavigation() {
     );
   }
   
-  // Desktop navigation
+  // Desktop navigation - pure CSS
   return (
     <div className="mb-8 flex justify-center sm:justify-start">
       <div className="glass-effect rounded-full p-1.5 flex items-center justify-between gap-1 shadow-sm relative">
-        {/* Background indicator */}
+        {/* Background indicator - using CSS variables for positioning */}
         <div 
           className="absolute h-[calc(100%-12px)] top-1.5 bg-primary rounded-full -z-0 transition-all duration-300 ease-out"
           style={{
-            left: `${8 + (activeIndex * 108)}px`,  // Approximate widths
-            width: activeIndex === 0 ? '110px' : activeIndex === 1 ? '104px' : activeIndex === 2 ? '118px' : '108px',
+            left: activeIndex === 0 ? '8px' : 
+                  activeIndex === 1 ? '116px' : 
+                  activeIndex === 2 ? '220px' : 
+                  '338px',
+            width: activeIndex === 0 ? '108px' : 
+                   activeIndex === 1 ? '104px' : 
+                   activeIndex === 2 ? '118px' : 
+                   '110px',
             opacity: 1,
           }}
         />
         
-        {navItems.map((item) => (
+        {navItemsData.map((item) => (
           <Link key={item.path} href={item.path}>
             <div 
               className={`
@@ -79,7 +77,7 @@ export default function TabNavigation() {
                   : "text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white"}
               `}
             >
-              {item.icon}
+              <item.Icon className="h-4 w-4" />
               <span className="text-sm">{item.label}</span>
             </div>
           </Link>
