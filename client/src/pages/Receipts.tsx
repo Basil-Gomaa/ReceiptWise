@@ -1,16 +1,19 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
-import { Calendar, Download, Search, SlidersHorizontal, Database } from "lucide-react";
+import { Calendar, Download, Search, SlidersHorizontal, Database, Calendar as CalendarIcon, ChevronDown, ArrowUpDown, ArrowDown, ArrowUp } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar as CalendarComponent } from "@/components/ui/calendar";
+import { format } from "date-fns";
 import FileUploader from "@/components/FileUploader";
 import OcrProcessingUI from "@/components/OcrProcessingUI";
 import ReceiptCard from "@/components/ReceiptCard";
 import AddReceiptModal from "@/components/AddReceiptModal";
-import { formatCurrency } from "@/lib/utils";
+import { formatCurrency, formatDateString } from "@/lib/utils";
 
 // Type definitions for the API responses
 interface Receipt {
@@ -50,6 +53,39 @@ export default function Receipts() {
   const [ocrError, setOcrError] = useState<string | undefined>(undefined);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("all");
+  
+  // Advanced filtering and sorting states
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
+  const [sortBy, setSortBy] = useState<"date" | "amount" | "merchant">("date");
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
+  const [dateRange, setDateRange] = useState<{
+    from: Date | undefined;
+    to: Date | undefined;
+  }>({
+    from: undefined,
+    to: undefined,
+  });
+  const [amountRange, setAmountRange] = useState<{
+    min: number | undefined;
+    max: number | undefined;
+  }>({
+    min: undefined,
+    max: undefined,
+  });
+  
+  // Check if any advanced filters are active
+  const hasActiveFilters = useRef(false);
+  
+  // Determine if advanced filters are active
+  useEffect(() => {
+    hasActiveFilters.current = (
+      (sortBy !== "date" || sortDirection !== "desc") || 
+      dateRange.from !== undefined || 
+      dateRange.to !== undefined || 
+      amountRange.min !== undefined || 
+      amountRange.max !== undefined
+    );
+  }, [sortBy, sortDirection, dateRange, amountRange]);
 
   // Fetch receipts and categories
   const { data: receipts = [], isLoading: receiptsLoading } = useQuery<Receipt[]>({
@@ -201,16 +237,56 @@ export default function Receipts() {
     }
   };
 
-  // Filter receipts based on search and category
-  const filteredReceipts = receipts.filter((receipt: Receipt) => {
-    const matchesSearch = searchQuery === "" || 
-      receipt.merchantName.toLowerCase().includes(searchQuery.toLowerCase());
+  // Apply the advanced filters and sorting
+  const filteredAndSortedReceipts = receipts
+    .filter((receipt: Receipt) => {
+      // Apply basic filters (search query and category)
+      const matchesSearch = searchQuery === "" || 
+        receipt.merchantName.toLowerCase().includes(searchQuery.toLowerCase());
+      
+      const matchesCategory = selectedCategory === "all" || 
+        receipt.categoryId === parseInt(selectedCategory);
+      
+      // Apply date range filter
+      const receiptDate = new Date(receipt.date);
+      const matchesDateFrom = !dateRange.from || receiptDate >= dateRange.from;
+      const matchesDateTo = !dateRange.to || receiptDate <= dateRange.to;
+      
+      // Apply amount range filter
+      const receiptAmount = typeof receipt.total === 'string' ? parseFloat(receipt.total) : receipt.total;
+      const matchesAmountMin = amountRange.min === undefined || receiptAmount >= amountRange.min;
+      const matchesAmountMax = amountRange.max === undefined || receiptAmount <= amountRange.max;
+      
+      return matchesSearch && matchesCategory && matchesDateFrom && matchesDateTo && 
+        matchesAmountMin && matchesAmountMax;
+    })
+    .sort((a, b) => {
+      // Apply sorting
+      if (sortBy === "date") {
+        const dateA = new Date(a.date).getTime();
+        const dateB = new Date(b.date).getTime();
+        return sortDirection === "asc" ? dateA - dateB : dateB - dateA;
+      }
+      
+      if (sortBy === "amount") {
+        const amountA = typeof a.total === 'string' ? parseFloat(a.total) : a.total;
+        const amountB = typeof b.total === 'string' ? parseFloat(b.total) : b.total;
+        return sortDirection === "asc" ? amountA - amountB : amountB - amountA;
+      }
+      
+      if (sortBy === "merchant") {
+        const merchantA = a.merchantName.toLowerCase();
+        const merchantB = b.merchantName.toLowerCase();
+        return sortDirection === "asc" 
+          ? merchantA.localeCompare(merchantB) 
+          : merchantB.localeCompare(merchantA);
+      }
+      
+      return 0;
+    });
     
-    const matchesCategory = selectedCategory === "all" || 
-      receipt.categoryId === parseInt(selectedCategory);
-    
-    return matchesSearch && matchesCategory;
-  });
+  // Reset to previous variable name for compatibility
+  const filteredReceipts = filteredAndSortedReceipts;
 
   // Seed data mutation
   const seedMutation = useMutation({
@@ -310,9 +386,201 @@ export default function Receipts() {
               ))}
             </select>
             
-            <button className="p-2 rounded-lg bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600">
-              <SlidersHorizontal className="h-5 w-5 text-gray-500 dark:text-gray-400" />
-            </button>
+            <Popover open={isFilterOpen} onOpenChange={setIsFilterOpen}>
+              <PopoverTrigger asChild>
+                <button 
+                  className={`p-2 rounded-lg relative ${
+                    isFilterOpen 
+                      ? 'bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-400' 
+                      : hasActiveFilters.current
+                        ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/50' 
+                        : 'bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-500 dark:text-gray-400'
+                  }`}
+                >
+                  <SlidersHorizontal className="h-5 w-5" />
+                  {hasActiveFilters.current && !isFilterOpen && (
+                    <span className="absolute -top-1 -right-1 w-3 h-3 bg-blue-500 rounded-full border-2 border-white dark:border-gray-800"></span>
+                  )}
+                </button>
+              </PopoverTrigger>
+              
+              <PopoverContent className="w-80 p-4">
+                <div className="space-y-4">
+                  <h3 className="font-medium">Filter & Sort</h3>
+                  
+                  {/* Sort Options */}
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">Sort By</h4>
+                    <div className="grid grid-cols-3 gap-2">
+                      <button
+                        className={`py-1 px-2 rounded-md text-sm text-center ${
+                          sortBy === "date" 
+                            ? "bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-400" 
+                            : "bg-gray-100 dark:bg-gray-800"
+                        }`}
+                        onClick={() => setSortBy("date")}
+                      >
+                        Date
+                      </button>
+                      <button
+                        className={`py-1 px-2 rounded-md text-sm text-center ${
+                          sortBy === "amount" 
+                            ? "bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-400" 
+                            : "bg-gray-100 dark:bg-gray-800"
+                        }`}
+                        onClick={() => setSortBy("amount")}
+                      >
+                        Amount
+                      </button>
+                      <button
+                        className={`py-1 px-2 rounded-md text-sm text-center ${
+                          sortBy === "merchant" 
+                            ? "bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-400" 
+                            : "bg-gray-100 dark:bg-gray-800"
+                        }`}
+                        onClick={() => setSortBy("merchant")}
+                      >
+                        Merchant
+                      </button>
+                    </div>
+                    
+                    <div className="mt-2 flex items-center justify-between">
+                      <span className="text-sm text-gray-500 dark:text-gray-400">Order</span>
+                      <button
+                        className="flex items-center space-x-1 text-sm bg-gray-100 dark:bg-gray-800 py-1 px-2 rounded-md"
+                        onClick={() => setSortDirection(sortDirection === "asc" ? "desc" : "asc")}
+                      >
+                        {sortDirection === "asc" ? (
+                          <>
+                            <ArrowUp className="h-4 w-4" />
+                            <span>Ascending</span>
+                          </>
+                        ) : (
+                          <>
+                            <ArrowDown className="h-4 w-4" />
+                            <span>Descending</span>
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  </div>
+                  
+                  {/* Date Range */}
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">Date Range</h4>
+                    <div className="grid grid-cols-2 gap-2">
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <button
+                            className="flex items-center justify-between bg-gray-100 dark:bg-gray-800 p-2 rounded-md text-sm"
+                          >
+                            <span>
+                              {dateRange.from ? format(dateRange.from, 'PP') : 'From date'}
+                            </span>
+                            <CalendarIcon className="h-4 w-4 opacity-50" />
+                          </button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                          <CalendarComponent
+                            mode="single"
+                            selected={dateRange.from}
+                            onSelect={(date) => 
+                              setDateRange(prev => ({...prev, from: date}))}
+                            initialFocus
+                          />
+                        </PopoverContent>
+                      </Popover>
+                      
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <button
+                            className="flex items-center justify-between bg-gray-100 dark:bg-gray-800 p-2 rounded-md text-sm"
+                          >
+                            <span>
+                              {dateRange.to ? format(dateRange.to, 'PP') : 'To date'}
+                            </span>
+                            <CalendarIcon className="h-4 w-4 opacity-50" />
+                          </button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                          <CalendarComponent
+                            mode="single"
+                            selected={dateRange.to}
+                            onSelect={(date) => 
+                              setDateRange(prev => ({...prev, to: date}))}
+                            initialFocus
+                          />
+                        </PopoverContent>
+                      </Popover>
+                    </div>
+                    {(dateRange.from || dateRange.to) && (
+                      <button 
+                        className="mt-1 text-xs text-blue-600 dark:text-blue-400"
+                        onClick={() => setDateRange({from: undefined, to: undefined})}
+                      >
+                        Clear dates
+                      </button>
+                    )}
+                  </div>
+                  
+                  {/* Amount Range */}
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">Amount Range</h4>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <input
+                          type="number"
+                          placeholder="Min ($)"
+                          value={amountRange.min === undefined ? '' : amountRange.min}
+                          onChange={(e) => setAmountRange(prev => ({
+                            ...prev, 
+                            min: e.target.value === '' ? undefined : Number(e.target.value)
+                          }))}
+                          className="w-full p-2 rounded-md text-sm bg-gray-100 dark:bg-gray-800"
+                        />
+                      </div>
+                      <div>
+                        <input
+                          type="number"
+                          placeholder="Max ($)"
+                          value={amountRange.max === undefined ? '' : amountRange.max}
+                          onChange={(e) => setAmountRange(prev => ({
+                            ...prev, 
+                            max: e.target.value === '' ? undefined : Number(e.target.value)
+                          }))}
+                          className="w-full p-2 rounded-md text-sm bg-gray-100 dark:bg-gray-800"
+                        />
+                      </div>
+                    </div>
+                    {(amountRange.min !== undefined || amountRange.max !== undefined) && (
+                      <button 
+                        className="mt-1 text-xs text-blue-600 dark:text-blue-400"
+                        onClick={() => setAmountRange({min: undefined, max: undefined})}
+                      >
+                        Clear amounts
+                      </button>
+                    )}
+                  </div>
+                  
+                  {/* Reset all filters */}
+                  <div className="pt-2">
+                    <Button 
+                      onClick={() => {
+                        setSortBy("date");
+                        setSortDirection("desc");
+                        setDateRange({from: undefined, to: undefined});
+                        setAmountRange({min: undefined, max: undefined});
+                        setIsFilterOpen(false);
+                      }}
+                      variant="outline"
+                      className="w-full"
+                    >
+                      Reset Filters
+                    </Button>
+                  </div>
+                </div>
+              </PopoverContent>
+            </Popover>
           </div>
         </div>
         
