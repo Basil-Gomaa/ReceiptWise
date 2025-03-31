@@ -10,6 +10,7 @@ import { motion } from "framer-motion";
 import { Plus, Trophy, Target, ChevronRight, Check, Rocket, Flame, Timer, TrendingUp, Award } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { Progress } from "@/components/ui/progress";
+import AddChallengeForm from "@/components/AddChallengeForm";
 
 type SavingsChallenge = {
   id: number;
@@ -277,6 +278,8 @@ const ChallengeCard = ({ challenge, onProgress }: ChallengeCardProps) => {
 };
 
 export default function Challenges() {
+  const [isAddChallengeDialogOpen, setIsAddChallengeDialogOpen] = useState(false);
+  
   const { data: challenges = [], isLoading, isError } = useQuery<SavingsChallenge[]>({
     queryKey: ['/api/savings-challenges'],
   });
@@ -305,8 +308,106 @@ export default function Challenges() {
     },
   });
   
+  // Add new challenge mutation
+  const createChallengeMutation = useMutation({
+    mutationFn: async (data: any) => {
+      return apiRequest('POST', '/api/savings-challenges', {
+        name: data.name,
+        description: data.description || null,
+        targetAmount: data.targetAmount,
+        currentAmount: "0", // Start with 0 progress
+        startDate: data.startDate,
+        endDate: data.endDate,
+        status: "active",
+        type: data.type,
+        category: data.category,
+        difficulty: data.difficulty,
+        icon: getCategoryIcon(data.category),
+        colorScheme: getDifficultyColor(data.difficulty),
+        userId: null,
+        // Create milestones based on target amount
+        milestones: generateMilestones(parseFloat(data.targetAmount), data.difficulty)
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/savings-challenges'] });
+      toast({
+        title: "Challenge created",
+        description: "Your new savings challenge has been created!",
+      });
+      setIsAddChallengeDialogOpen(false);
+    },
+    onError: (error: Error) => {
+      console.error("Challenge creation error:", error);
+      toast({
+        title: "Failed to create challenge",
+        description: error.message || "There was a problem creating your challenge",
+        variant: "destructive",
+      });
+    },
+  });
+  
+  // Helper function to get icon based on category
+  const getCategoryIcon = (category: string): string => {
+    const iconMap: Record<string, string> = {
+      'Food & Dining': 'utensils',
+      'Coffee': 'coffee',
+      'Shopping': 'shopping-bag',
+      'Transportation': 'target',
+      'Entertainment': 'trophy',
+      'Groceries': 'shopping-bag'
+    };
+    
+    return iconMap[category] || 'target';
+  };
+  
+  // Helper function to get color based on difficulty
+  const getDifficultyColor = (difficulty: string): string => {
+    const colorMap: Record<string, string> = {
+      'easy': '#3B82F6', // Blue
+      'medium': '#10B981', // Green
+      'hard': '#EC4899'   // Pink
+    };
+    
+    return colorMap[difficulty] || '#3B82F6';
+  };
+  
+  // Helper function to generate milestones based on target amount
+  const generateMilestones = (targetAmount: number, difficulty: string) => {
+    const milestones = [];
+    const numMilestones = difficulty === 'easy' ? 3 : difficulty === 'medium' ? 3 : 4;
+    
+    for (let i = 1; i <= numMilestones; i++) {
+      const percentage = i / numMilestones;
+      const amount = Math.round((targetAmount * percentage) * 100) / 100;
+      
+      let reward = "";
+      if (i === numMilestones) {
+        reward = "Challenge Complete! You did it!";
+      } else if (i === 1) {
+        reward = "Achievement Badge";
+      } else if (i === 2) {
+        reward = "Special Status";
+      } else {
+        reward = "Progress Boost";
+      }
+      
+      milestones.push({
+        amount,
+        reached: false,
+        reward
+      });
+    }
+    
+    return milestones;
+  };
+  
   const handleProgressUpdate = (id: number, amount: number) => {
     updateProgressMutation.mutate({ id, amount });
+  };
+  
+  const handleCreateChallenge = (formData: any) => {
+    createChallengeMutation.mutate(formData);
   };
   
   // Group challenges by status
@@ -317,10 +418,28 @@ export default function Challenges() {
     <div>
       <div className="flex justify-between items-center mb-6">
         <h2 className="text-2xl font-bold">Savings Challenges</h2>
-        <Button variant="outline" className="flex items-center gap-1">
-          <Plus className="h-4 w-4" />
-          New Challenge
-        </Button>
+        <Dialog open={isAddChallengeDialogOpen} onOpenChange={setIsAddChallengeDialogOpen}>
+          <DialogTrigger asChild>
+            <Button variant="outline" className="flex items-center gap-1">
+              <Plus className="h-4 w-4" />
+              New Challenge
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="sm:max-w-md md:max-w-lg">
+            <DialogHeader>
+              <DialogTitle>Create New Savings Challenge</DialogTitle>
+              <DialogDescription>
+                Set up a new savings challenge to help you reach your financial goals.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="mt-4">
+              <AddChallengeForm 
+                onSubmit={handleCreateChallenge} 
+                isLoading={createChallengeMutation.isPending}
+              />
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
       
       {isLoading ? (
@@ -340,7 +459,7 @@ export default function Challenges() {
               <p className="text-gray-500 dark:text-gray-400 max-w-md mx-auto mb-6">
                 Start saving money by creating your first challenge. Set goals, track progress, and earn rewards!
               </p>
-              <Button>
+              <Button onClick={() => setIsAddChallengeDialogOpen(true)}>
                 <Plus className="h-4 w-4 mr-2" />
                 Create Your First Challenge
               </Button>
