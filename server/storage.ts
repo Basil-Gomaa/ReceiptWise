@@ -283,20 +283,8 @@ export class MemStorage implements IStorage {
   
   async createSavingsChallenge(insertChallenge: InsertSavingsChallenge): Promise<SavingsChallenge> {
     const id = this.savingsChallengeId++;
-    
-    // Parse the date strings to Date objects if they are strings
-    const startDate = typeof insertChallenge.startDate === 'string' 
-      ? new Date(insertChallenge.startDate) 
-      : insertChallenge.startDate;
-      
-    const endDate = typeof insertChallenge.endDate === 'string' 
-      ? new Date(insertChallenge.endDate) 
-      : insertChallenge.endDate;
-    
     const challenge: SavingsChallenge = {
       ...insertChallenge,
-      startDate,
-      endDate,
       id,
       createdAt: new Date(),
       updatedAt: new Date()
@@ -309,20 +297,9 @@ export class MemStorage implements IStorage {
     const challenge = this.savingsChallenges.get(id);
     if (!challenge) return undefined;
     
-    // Handle date conversions if they exist in the update data
-    const updatedData = { ...challengeData };
-    
-    if (typeof updatedData.startDate === 'string') {
-      updatedData.startDate = new Date(updatedData.startDate);
-    }
-    
-    if (typeof updatedData.endDate === 'string') {
-      updatedData.endDate = new Date(updatedData.endDate);
-    }
-    
     const updatedChallenge = { 
       ...challenge, 
-      ...updatedData,
+      ...challengeData,
       updatedAt: new Date()
     };
     this.savingsChallenges.set(id, updatedChallenge);
