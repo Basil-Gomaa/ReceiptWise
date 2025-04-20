@@ -1,12 +1,12 @@
 import type { Config } from "tailwindcss";
-import { heroui } from "@heroui/react";
+import { nextui } from "@nextui-org/react";
 
 export default {
   darkMode: ["class"],
   content: [
     "./client/index.html", 
     "./client/src/**/*.{js,jsx,ts,tsx}",
-    "./node_modules/@heroui/react/dist/**/*.{js,ts,jsx,tsx}" // Add HeroUI components
+    "./node_modules/@nextui-org/react/dist/**/*.{js,ts,jsx,tsx}" // Add NextUI components
   ],
   theme: {
     extend: {
@@ -94,6 +94,6 @@ export default {
   plugins: [
     require("tailwindcss-animate"), 
     require("@tailwindcss/typography"),
-    heroui() // Add HeroUI plugin
+    nextui() // Add NextUI plugin
   ],
 } satisfies Config;

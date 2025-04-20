@@ -1,14 +1,13 @@
 import { useQuery } from "@tanstack/react-query";
 import { BarChart, Calendar, DollarSign, Tag, TrendingUp, Receipt, PieChart as PieChartIcon } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
-import { Skeleton } from "@/components/ui/skeleton";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui";
+import { Skeleton } from "@/components/ui";
 import MonthlySpendingChart from "@/components/charts/MonthlySpendingChart";
 import CategoryDistributionChart from "@/components/charts/CategoryDistributionChart";
 import FinancialMoodIndicator from "@/components/FinancialMoodIndicator";
 import { formatCurrency } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { Badge } from "@/components/ui/badge";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Badge } from "@/components/ui";
 
 // Define types for the comparison data
 interface MonthlyComparison {
@@ -176,16 +175,11 @@ export default function Dashboard() {
           <CardHeader className="pb-2">
             <div className="flex justify-between items-center">
               <CardTitle className="text-lg font-medium">Monthly Spending</CardTitle>
-              <Select defaultValue="6months">
-                <SelectTrigger className="h-8 text-xs w-[110px]">
-                  <SelectValue placeholder="Select period" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="6months">Last 6 Months</SelectItem>
-                  <SelectItem value="12months">Last Year</SelectItem>
-                  <SelectItem value="alltime">All Time</SelectItem>
-                </SelectContent>
-              </Select>
+              <select className="h-8 text-xs w-[110px] rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-2">
+                <option value="6months">Last 6 Months</option>
+                <option value="12months">Last Year</option>
+                <option value="alltime">All Time</option>
+              </select>
             </div>
           </CardHeader>
           
@@ -213,16 +207,11 @@ export default function Dashboard() {
           <CardHeader className="pb-2">
             <div className="flex justify-between items-center">
               <CardTitle className="text-lg font-medium">Expense Categories</CardTitle>
-              <Select defaultValue="thismonth">
-                <SelectTrigger className="h-8 text-xs w-[110px]">
-                  <SelectValue placeholder="Select period" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="thismonth">This Month</SelectItem>
-                  <SelectItem value="lastmonth">Last Month</SelectItem>
-                  <SelectItem value="3months">Last 3 Months</SelectItem>
-                </SelectContent>
-              </Select>
+              <select className="h-8 text-xs w-[110px] rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-2">
+                <option value="thismonth">This Month</option>
+                <option value="lastmonth">Last Month</option>
+                <option value="3months">Last 3 Months</option>
+              </select>
             </div>
           </CardHeader>
           
@@ -258,16 +247,11 @@ export default function Dashboard() {
               <button className="text-xs font-medium bg-gray-100 dark:bg-gray-800 px-3 py-1.5 rounded-full">
                 Sort ↑↓
               </button>
-              <Select defaultValue="all">
-                <SelectTrigger className="h-8 text-xs w-[100px]">
-                  <SelectValue placeholder="Filter" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Types</SelectItem>
-                  <SelectItem value="food">Food & Dining</SelectItem>
-                  <SelectItem value="shopping">Shopping</SelectItem>
-                </SelectContent>
-              </Select>
+              <select className="h-8 text-xs w-[100px] rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-2">
+                <option value="all">All Types</option>
+                <option value="food">Food & Dining</option>
+                <option value="shopping">Shopping</option>
+              </select>
             </div>
           </div>
         </CardHeader>
