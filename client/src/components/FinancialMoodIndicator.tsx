@@ -88,14 +88,28 @@ export default function FinancialMoodIndicator({
   const getMoodColor = () => {
     switch (mood) {
       case 'happy':
-        return 'text-green-500 dark:text-green-400';
+        return 'from-green-500 to-emerald-600 text-white';
       case 'neutral':
-        return 'text-blue-400 dark:text-blue-300';
+        return 'from-cyan-500 to-blue-600 text-white';
       case 'sad':
-        return 'text-red-500 dark:text-red-400';
+        return 'from-red-500 to-rose-600 text-white';
       case 'unknown':
       default:
-        return 'text-purple-500 dark:text-purple-400';
+        return 'from-violet-600 to-purple-700 text-white';
+    }
+  };
+  
+  const getMoodGlow = () => {
+    switch (mood) {
+      case 'happy':
+        return 'shadow-[0_0_15px_rgba(16,185,129,0.5)]';
+      case 'neutral':
+        return 'shadow-[0_0_15px_rgba(59,130,246,0.5)]';
+      case 'sad':
+        return 'shadow-[0_0_15px_rgba(239,68,68,0.5)]';
+      case 'unknown':
+      default:
+        return 'shadow-[0_0_15px_rgba(139,92,246,0.5)]';
     }
   };
 
@@ -144,19 +158,28 @@ export default function FinancialMoodIndicator({
   const animation = getMoodAnimation();
 
   return (
-    <div className="flex flex-col items-center justify-center py-6">
-      <h3 className="text-lg font-medium text-center mb-4">Financial Mood</h3>
+    <div className="glass-effect rounded-xl overflow-hidden py-6">
+      <h3 className="text-lg font-medium text-center mb-5 text-white">Financial Mood</h3>
       
-      <motion.div 
-        {...animation}
-        className="mb-4"
-      >
-        <span className="text-9xl" role="img" aria-label="Mood Emoji">
-          {getMoodEmoji()}
-        </span>
-      </motion.div>
+      <div className="relative">
+        {/* Decorative glowing orb behind the emoji */}
+        <div className={`absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-32 h-32 rounded-full blur-2xl opacity-40 bg-gradient-to-br ${getMoodColor()}`}></div>
+        
+        <motion.div 
+          {...animation}
+          className="mb-4 relative z-10"
+        >
+          <span 
+            className={`block text-9xl ${getMoodGlow()} rounded-full p-2`} 
+            role="img" 
+            aria-label="Mood Emoji"
+          >
+            {getMoodEmoji()}
+          </span>
+        </motion.div>
+      </div>
       
-      <div className={`text-xl font-bold ${getMoodColor()} mb-2`}>
+      <div className={`text-xl font-bold mb-2 text-center bg-gradient-to-r ${getMoodColor()} bg-clip-text`}>
         {mood === 'happy' ? 'Happy' : 
          mood === 'neutral' ? 'Neutral' : 
          mood === 'sad' ? 'Sad' : 'Unknown'}
@@ -166,10 +189,12 @@ export default function FinancialMoodIndicator({
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.3 }}
-        className="mt-1 flex items-center gap-1 text-xs font-medium text-purple-500 dark:text-purple-400"
+        className="mt-2 flex items-center justify-center gap-1.5 text-xs font-medium"
       >
-        <Sparkles className="h-3 w-3" />
-        <span>AI Powered</span>
+        <span className="inline-flex items-center px-2.5 py-1 rounded-full bg-gradient-to-r from-violet-600/20 to-fuchsia-600/20 backdrop-blur-md border border-white/10">
+          <Sparkles className="h-3 w-3 mr-1 text-purple-400" />
+          <span className="text-purple-200">AI Powered</span>
+        </span>
       </motion.div>
     </div>
   );
